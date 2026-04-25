@@ -27,3 +27,39 @@ void AMultiplayerLobbyGameMode::Logout(AController* Exiting)
 {
 	Super::Logout(Exiting);
 }
+
+void AMultiplayerLobbyGameMode::PlayerReadyChanged()
+{
+	CheckStartMatch();
+}
+
+void AMultiplayerLobbyGameMode::CheckStartMatch()
+{
+	if (!bAutoStartWhenAllReady || bMatchStarting || !GameState)
+	{
+		return;
+	}
+
+	if (GameState->PlayerArray.Num() < PlayersToStartMatch)
+	{
+		return;
+	}
+
+	for (APlayerState* PS : GameState->PlayerArray)
+	{
+		AMultiplayerLobbyPlayerState* LobbyPS = Cast<AMultiplayerLobbyPlayerState>(PS);
+		if (!LobbyPS || !LobbyPS->IsReady())
+		{
+			return;
+		}
+	}
+
+	bMatchStarting = true;
+	bUseSeamlessTravel = true;
+
+	if (UWorld* World = GetWorld())
+	{
+		UE_LOG(LogTemp, Log, TEXT("All players ready. Traveling to match map: %s"), *MatchMapPath);
+		World->ServerTravel(FString::Printf(TEXT("%s?listen"), *MatchMapPath));
+	}
+}

@@ -12,9 +12,36 @@ void AMultiplayerLobbyPlayerController::BeginPlay()
 
 	if (UGameInstance* GI = GetGameInstance())
 	{
-		if (UMultiplayerSessionsSubsystem* Subsystem = GI->GetSubsystem<UMultiplayerSessionsSubsystem>())
+		if (UMultiplayerSessionsSubsystem* Subsystem =
+			GI->GetSubsystem<UMultiplayerSessionsSubsystem>())
 		{
-			Subsystem->MultiplayerOnLoginComplete.AddDynamic(this, &ThisClass::HandleSubsystemLoginComplete);
+			Subsystem->MultiplayerOnLoginComplete.AddDynamic(
+				this,
+				&ThisClass::HandleSubsystemLoginComplete
+			);
+
+			// DEBUG
+			UE_LOG(
+				LogTemp,
+				Warning,
+				TEXT("Bound LoginComplete delegate")
+			);
+
+			// Se login ocorreu antes do bind,
+			// chama manualmente
+			if (Subsystem->IsLoggedIn())
+			{
+				UE_LOG(
+					LogTemp,
+					Warning,
+					TEXT("Already logged in, syncing nickname...")
+				);
+
+				HandleSubsystemLoginComplete(
+					true,
+					TEXT("")
+				);
+			}
 		}
 	}
 }
@@ -31,7 +58,8 @@ void AMultiplayerLobbyPlayerController::HandleSubsystemLoginComplete(bool bWasSu
 		IOnlineIdentityPtr Identity = Subsystem->GetIdentityInterface();
 		if (Identity.IsValid())
 		{
-			const FString Nick = Identity->GetPlayerNickname(GetLocalPlayer() ? GetLocalPlayer()->GetControllerId() : 0);
+			const FString Nick = Identity->
+				GetPlayerNickname(GetLocalPlayer() ? GetLocalPlayer()->GetControllerId() : 0);
 			if (!Nick.IsEmpty())
 			{
 				ServerSetLobbyPlayerName(Nick);
@@ -47,21 +75,26 @@ void AMultiplayerLobbyPlayerController::ServerSendLobbyChatMessage_Implementatio
 		return;
 	}
 
-	AMultiplayerLobbyGameState* LobbyGameState = GetWorld() ? GetWorld()->GetGameState<AMultiplayerLobbyGameState>() : nullptr;
+	AMultiplayerLobbyGameState* LobbyGameState = GetWorld()
+		                                             ? GetWorld()->GetGameState<AMultiplayerLobbyGameState>()
+		                                             : nullptr;
 	if (!LobbyGameState)
 	{
 		return;
 	}
 
 	FString SenderName = PlayerState ? PlayerState->GetPlayerName() : TEXT("Player");
-	FString SenderId = PlayerState && PlayerState->GetUniqueId().IsValid() ? PlayerState->GetUniqueId()->ToString() : SenderName;
+	FString SenderId = PlayerState && PlayerState->GetUniqueId().IsValid()
+		                   ? PlayerState->GetUniqueId()->ToString()
+		                   : SenderName;
 
 	if (IOnlineSubsystem* Subsystem = IOnlineSubsystem::Get())
 	{
 		IOnlineIdentityPtr Identity = Subsystem->GetIdentityInterface();
 		if (Identity.IsValid())
 		{
-			const FString Nick = Identity->GetPlayerNickname(GetLocalPlayer() ? GetLocalPlayer()->GetControllerId() : 0);
+			const FString Nick = Identity->
+				GetPlayerNickname(GetLocalPlayer() ? GetLocalPlayer()->GetControllerId() : 0);
 			if (!Nick.IsEmpty())
 			{
 				SenderName = Nick;
@@ -96,11 +129,24 @@ void AMultiplayerLobbyPlayerController::ServerSetLobbyVoiceEnabled_Implementatio
 	}
 }
 
-void AMultiplayerLobbyPlayerController::ServerSetLobbyPlayerName_Implementation(const FString& NewName)
+void AMultiplayerLobbyPlayerController::
+ServerSetLobbyPlayerName_Implementation(
+	const FString& NewName)
 {
-	if (APlayerState* PS = GetPlayerState<APlayerState>())
+	if (APlayerState* PS =
+		GetPlayerState<APlayerState>())
 	{
 		PS->SetPlayerName(NewName);
+
+		PS->OnRep_PlayerName();
+
 		PS->ForceNetUpdate();
+
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("Lobby Player Name Set: %s"),
+			*NewName
+		);
 	}
 }

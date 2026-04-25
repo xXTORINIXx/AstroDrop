@@ -16,14 +16,25 @@ bool UMenu::Initialize()
 		return false;
 	}
 
+	if (PlayButton)
+	{
+		PlayButton->OnClicked.AddDynamic(this, &ThisClass::PlayButtonClicked);
+	}
+
 	if (HostButton)
 	{
+		// Compatibilidade: no WBP antigo, Host vira PLAY / Matchmaking BR.
 		HostButton->OnClicked.AddDynamic(this, &ThisClass::HostButtonClicked);
 	}
 
 	if (JoinButton)
 	{
 		JoinButton->OnClicked.AddDynamic(this, &ThisClass::JoinButtonClicked);
+	}
+
+	if (InviteButton)
+	{
+		InviteButton->OnClicked.AddDynamic(this, &ThisClass::InviteButtonClicked);
 	}
 
 	if (ReadyButton)
@@ -94,13 +105,14 @@ void UMenu::MenuSetup(int32 NumberOfPublicConnections, FString TypeOfMatch, FStr
 
 	BindSubsystemDelegates();
 
-	// Evita chamar login repetido se o menu reabrir
 	if (MultiplayerSessionsSubsystem->IsLoggedIn())
 	{
 		bTriedPortalLogin = false;
 		UpdateStatus(LOCTEXT("AlreadyConnected", "Conectado ao EOS"));
+		MultiplayerSessionsSubsystem->CreatePersonalParty();
 		SetButtonsEnabled(true);
 		RefreshHeaderPanel();
+		RefreshPartyPanel();
 		RefreshLobbyPanel();
 		RefreshChatPanel();
 		return;
@@ -126,6 +138,7 @@ void UMenu::BindSubsystemDelegates()
 	MultiplayerSessionsSubsystem->MultiplayerOnDestroySessionComplete.AddDynamic(this, &ThisClass::OnDestroySession);
 	MultiplayerSessionsSubsystem->MultiplayerOnStartSessionComplete.AddDynamic(this, &ThisClass::OnStartSession);
 	MultiplayerSessionsSubsystem->MultiplayerOnLobbyUpdated.AddDynamic(this, &ThisClass::OnLobbyUpdated);
+	MultiplayerSessionsSubsystem->MultiplayerOnPartyUpdated.AddDynamic(this, &ThisClass::OnPartyUpdated);
 	MultiplayerSessionsSubsystem->MultiplayerOnChatUpdated.AddDynamic(this, &ThisClass::OnChatUpdated);
 	MultiplayerSessionsSubsystem->MultiplayerOnVoiceEnabledChanged.AddDynamic(this, &ThisClass::OnVoiceEnabledChanged);
 	MultiplayerSessionsSubsystem->MultiplayerOnReadyStateChanged.AddDynamic(this, &ThisClass::OnReadyStateChanged);
@@ -146,6 +159,7 @@ void UMenu::UnbindSubsystemDelegates()
 	MultiplayerSessionsSubsystem->MultiplayerOnDestroySessionComplete.RemoveDynamic(this, &ThisClass::OnDestroySession);
 	MultiplayerSessionsSubsystem->MultiplayerOnStartSessionComplete.RemoveDynamic(this, &ThisClass::OnStartSession);
 	MultiplayerSessionsSubsystem->MultiplayerOnLobbyUpdated.RemoveDynamic(this, &ThisClass::OnLobbyUpdated);
+	MultiplayerSessionsSubsystem->MultiplayerOnPartyUpdated.RemoveDynamic(this, &ThisClass::OnPartyUpdated);
 	MultiplayerSessionsSubsystem->MultiplayerOnChatUpdated.RemoveDynamic(this, &ThisClass::OnChatUpdated);
 	MultiplayerSessionsSubsystem->MultiplayerOnVoiceEnabledChanged.RemoveDynamic(this, &ThisClass::OnVoiceEnabledChanged);
 	MultiplayerSessionsSubsystem->MultiplayerOnReadyStateChanged.RemoveDynamic(this, &ThisClass::OnReadyStateChanged);
@@ -157,6 +171,11 @@ bool UMenu::CanUseSubsystem() const
 	return MultiplayerSessionsSubsystem != nullptr;
 }
 
+bool UMenu::CanUsePartyActions() const
+{
+	return MultiplayerSessionsSubsystem && MultiplayerSessionsSubsystem->IsLoggedIn();
+}
+
 bool UMenu::CanUseLobbyActions() const
 {
 	return MultiplayerSessionsSubsystem && MultiplayerSessionsSubsystem->IsLoggedIn();
@@ -164,6 +183,11 @@ bool UMenu::CanUseLobbyActions() const
 
 void UMenu::SetButtonsEnabled(bool bEnabled)
 {
+	if (PlayButton)
+	{
+		PlayButton->SetIsEnabled(bEnabled);
+	}
+
 	if (HostButton)
 	{
 		HostButton->SetIsEnabled(bEnabled);
@@ -172,6 +196,11 @@ void UMenu::SetButtonsEnabled(bool bEnabled)
 	if (JoinButton)
 	{
 		JoinButton->SetIsEnabled(bEnabled);
+	}
+
+	if (InviteButton)
+	{
+		InviteButton->SetIsEnabled(bEnabled);
 	}
 
 	SetLobbyActionButtonsEnabled(bEnabled);
@@ -224,8 +253,9 @@ void UMenu::OnLoginComplete(bool bWasSuccessful, const FString& ErrorMessage)
 	{
 		bTriedPortalLogin = false;
 		SetButtonsEnabled(true);
-		UpdateStatus(LOCTEXT("Connected", "Conectado ao EOS"));
+		UpdateStatus(LOCTEXT("Connected", "Conectado ao EOS | Party criada"));
 		RefreshHeaderPanel();
+		RefreshPartyPanel();
 		RefreshLobbyPanel();
 		RefreshChatPanel();
 		return;
@@ -246,17 +276,23 @@ void UMenu::OnLoginComplete(bool bWasSuccessful, const FString& ErrorMessage)
 	UpdateStatus(FText::FromString(FString::Printf(TEXT("Falha no login: %s"), *ErrorMessage)));
 }
 
-void UMenu::HostButtonClicked()
+void UMenu::PlayButtonClicked()
 {
-	if (!CanUseLobbyActions())
+	if (!CanUsePartyActions())
 	{
-		UpdateStatus(LOCTEXT("NotConnectedHost", "Não conectado ao EOS"));
+		UpdateStatus(LOCTEXT("NotConnectedPlay", "Não conectado ao EOS"));
 		return;
 	}
 
 	SetButtonsEnabled(false);
-	UpdateStatus(LOCTEXT("CreatingSession", "Criando lobby..."));
-	MultiplayerSessionsSubsystem->CreateSession(NumPublicConnections, MatchType);
+	UpdateStatus(LOCTEXT("Matchmaking", "Buscando partida Battle Royale..."));
+	MultiplayerSessionsSubsystem->StartBattleRoyaleMatchmaking(NumPublicConnections, MatchType);
+}
+
+void UMenu::HostButtonClicked()
+{
+	// Compatibilidade com WBP antigo: Host agora é PLAY.
+	PlayButtonClicked();
 }
 
 void UMenu::JoinButtonClicked()
@@ -268,18 +304,29 @@ void UMenu::JoinButtonClicked()
 	}
 
 	SetButtonsEnabled(false);
-	UpdateStatus(LOCTEXT("SearchingSession", "Buscando lobbies..."));
+	UpdateStatus(LOCTEXT("SearchingSession", "Buscando lobbies de staging..."));
 	MultiplayerSessionsSubsystem->FindSessions(10000);
 }
 
-void UMenu::ReadyButtonClicked()
+void UMenu::InviteButtonClicked()
 {
-	if (!CanUseLobbyActions())
+	if (!CanUseSubsystem())
 	{
 		return;
 	}
 
-	MultiplayerSessionsSubsystem->SetLocalPlayerReady(!MultiplayerSessionsSubsystem->IsLocalPlayerReady());
+	UpdateStatus(LOCTEXT("InviteOpening", "Abrindo convite EOS..."));
+	MultiplayerSessionsSubsystem->OpenSessionInviteUI();
+}
+
+void UMenu::ReadyButtonClicked()
+{
+	if (!CanUsePartyActions())
+	{
+		return;
+	}
+
+	MultiplayerSessionsSubsystem->SetPartyReady(!MultiplayerSessionsSubsystem->IsLocalPlayerReady());
 }
 
 void UMenu::LeaveButtonClicked()
@@ -292,6 +339,7 @@ void UMenu::LeaveButtonClicked()
 	MultiplayerSessionsSubsystem->LeaveLobby();
 	UpdateStatus(LOCTEXT("LeftLobby", "Você saiu do lobby"));
 	SetButtonsEnabled(MultiplayerSessionsSubsystem->IsLoggedIn());
+	RefreshPartyPanel();
 	RefreshLobbyPanel();
 	RefreshChatPanel();
 }
@@ -337,7 +385,7 @@ void UMenu::OnCreateSession(bool bWasSuccessful)
 {
 	if (bWasSuccessful)
 	{
-		UpdateStatus(LOCTEXT("SessionCreated", "Lobby criado!"));
+		UpdateStatus(LOCTEXT("SessionCreated", "Staging lobby criado!"));
 
 		if (UWorld* World = GetWorld())
 		{
@@ -346,7 +394,7 @@ void UMenu::OnCreateSession(bool bWasSuccessful)
 		}
 	}
 
-	UpdateStatus(LOCTEXT("CreateFail", "Falha ao criar lobby"));
+	UpdateStatus(LOCTEXT("CreateFail", "Falha ao criar staging lobby"));
 	SetButtonsEnabled(true);
 }
 
@@ -373,14 +421,14 @@ void UMenu::OnFindSessions(const TArray<FOnlineSessionSearchResult>& Results, bo
 		FString FoundMatchType;
 		Result.Session.SessionSettings.Get(FName("MatchType"), FoundMatchType);
 
-		if (FoundMatchType == MatchType)
+		if (FoundMatchType.IsEmpty() || FoundMatchType == MatchType)
 		{
 			MultiplayerSessionsSubsystem->JoinSession(Result);
 			return;
 		}
 	}
 
-	UpdateStatus(LOCTEXT("MatchTypeNotFound", "Lobby encontrado, mas com MatchType diferente"));
+	UpdateStatus(LOCTEXT("MatchTypeNotFound", "Lobby encontrado, mas com playlist diferente"));
 	SetButtonsEnabled(true);
 }
 
@@ -419,7 +467,7 @@ void UMenu::OnJoinSession(EOnJoinSessionCompleteResult::Type Result)
 
 	if (APlayerController* PC = GetGameInstance() ? GetGameInstance()->GetFirstLocalPlayerController() : nullptr)
 	{
-		UpdateStatus(LOCTEXT("Joined", "Conectado ao lobby"));
+		UpdateStatus(LOCTEXT("Joined", "Conectado ao staging lobby"));
 		PC->ClientTravel(Address, ETravelType::TRAVEL_Absolute);
 		return;
 	}
@@ -433,7 +481,9 @@ void UMenu::OnDestroySession(bool bWasSuccessful)
 	if (bWasSuccessful)
 	{
 		UpdateStatus(LOCTEXT("Destroyed", "Sessão destruída"));
-		OnConnectionStateChanged(EMultiplayerConnectionState::LoggedIn);
+		OnConnectionStateChanged(MultiplayerSessionsSubsystem && MultiplayerSessionsSubsystem->IsInParty()
+			? EMultiplayerConnectionState::InParty
+			: EMultiplayerConnectionState::LoggedIn);
 		return;
 	}
 
@@ -452,6 +502,11 @@ void UMenu::OnStartSession(bool bWasSuccessful)
 void UMenu::OnLobbyUpdated()
 {
 	RefreshLobbyPanel();
+}
+
+void UMenu::OnPartyUpdated()
+{
+	RefreshPartyPanel();
 }
 
 void UMenu::OnChatUpdated()
@@ -489,6 +544,8 @@ void UMenu::OnReadyStateChanged(bool bReady)
 			bReady ? FSlateColor(FLinearColor(0.1f, 0.8f, 0.2f, 1.f)) : FSlateColor(FLinearColor::Gray)
 		);
 	}
+
+	RefreshPartyPanel();
 }
 
 void UMenu::OnConnectionStateChanged(EMultiplayerConnectionState NewState)
@@ -498,9 +555,10 @@ void UMenu::OnConnectionStateChanged(EMultiplayerConnectionState NewState)
 		LobbyStateText->SetText(BuildConnectionStateText(NewState));
 	}
 
-	// Host e Join só fazem sentido quando logado e fora de um fluxo de conexão.
 	const bool bCanUseMainActions =
 		(NewState == EMultiplayerConnectionState::LoggedIn) ||
+		(NewState == EMultiplayerConnectionState::InParty) ||
+		(NewState == EMultiplayerConnectionState::InStagingLobby) ||
 		(NewState == EMultiplayerConnectionState::InLobby);
 
 	SetButtonsEnabled(bCanUseMainActions);
@@ -516,6 +574,12 @@ FText UMenu::BuildConnectionStateText(EMultiplayerConnectionState State) const
 		return LOCTEXT("ConnConnecting", "Estado: Conectando");
 	case EMultiplayerConnectionState::LoggedIn:
 		return LOCTEXT("ConnLogged", "Estado: Logado");
+	case EMultiplayerConnectionState::InParty:
+		return LOCTEXT("ConnParty", "Estado: Em Party");
+	case EMultiplayerConnectionState::Matchmaking:
+		return LOCTEXT("ConnMatchmaking", "Estado: Buscando Partida");
+	case EMultiplayerConnectionState::InStagingLobby:
+		return LOCTEXT("ConnStaging", "Estado: Staging Lobby");
 	case EMultiplayerConnectionState::InLobby:
 		return LOCTEXT("ConnLobby", "Estado: Em Lobby");
 	case EMultiplayerConnectionState::InMatch:
@@ -564,6 +628,43 @@ void UMenu::RefreshHeaderPanel()
 	}
 }
 
+void UMenu::RefreshPartyPanel()
+{
+	if (!MultiplayerSessionsSubsystem)
+	{
+		return;
+	}
+
+	const TArray<FMultiplayerPartyMemberInfo>& PartyMembers = MultiplayerSessionsSubsystem->GetPartyMembers();
+
+	FString Buffer;
+	for (const FMultiplayerPartyMemberInfo& Member : PartyMembers)
+	{
+		Buffer += FString::Printf(
+			TEXT("%s%s%s | %s\n"),
+			Member.bIsLocalPlayer ? TEXT("👉 ") : TEXT(""),
+			*Member.PlayerName,
+			Member.bIsLeader ? TEXT(" 👑") : TEXT(""),
+			Member.bIsReady ? TEXT("🟢 Ready") : TEXT("⚪ Not Ready")
+		);
+	}
+
+	if (Buffer.IsEmpty())
+	{
+		Buffer = TEXT("Party vazia. Faça login para criar sua party.");
+	}
+
+	if (PartyListText)
+	{
+		PartyListText->SetText(FText::FromString(Buffer));
+	}
+	else if (PlayerListText && MultiplayerSessionsSubsystem->GetLobbyPlayers().Num() == 0)
+	{
+		// Compatibilidade com WBP antigo: usa PlayerListText para exibir party no menu principal.
+		PlayerListText->SetText(FText::FromString(Buffer));
+	}
+}
+
 void UMenu::RefreshLobbyPanel()
 {
 	RefreshHeaderPanel();
@@ -573,9 +674,14 @@ void UMenu::RefreshLobbyPanel()
 		return;
 	}
 
-	FString Buffer;
 	const TArray<FMultiplayerLobbyPlayerInfo>& Players = MultiplayerSessionsSubsystem->GetLobbyPlayers();
+	if (Players.Num() == 0)
+	{
+		RefreshPartyPanel();
+		return;
+	}
 
+	FString Buffer;
 	for (const FMultiplayerLobbyPlayerInfo& Player : Players)
 	{
 		Buffer += FString::Printf(
@@ -585,11 +691,6 @@ void UMenu::RefreshLobbyPanel()
 			Player.bIsReady ? TEXT("🟢 Ready") : TEXT("⚪ Not Ready"),
 			Player.bVoiceEnabled ? TEXT("🎤 Voice On") : TEXT("🔇 Voice Off")
 		);
-	}
-
-	if (Buffer.IsEmpty())
-	{
-		Buffer = TEXT("Nenhum jogador no lobby ainda.");
 	}
 
 	PlayerListText->SetText(FText::FromString(Buffer));

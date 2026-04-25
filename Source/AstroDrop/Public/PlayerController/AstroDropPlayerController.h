@@ -17,7 +17,11 @@ UCLASS()
 class ASTRODROP_API AAstroDropPlayerController : public AMultiplayerLobbyPlayerController
 {
 	GENERATED_BODY()
-	
+public:
+
+	UFUNCTION(Client, Reliable)
+	void ClientSetEOSNickname(
+		const FString& Nickname);
 protected:
 	/** Input Mapping Contexts */
 	UPROPERTY(EditAnywhere, Category ="Input|Input Mappings")

@@ -6,9 +6,12 @@
 #include "OnlineSessionSettings.h"
 #include "Online/OnlineSessionNames.h"
 #include "Interfaces/VoiceInterface.h"
+#include "Interfaces/OnlineExternalUIInterface.h"
 #include "Engine/LocalPlayer.h"
 #include "Engine/World.h"
 #include "Engine/Engine.h"
+#include "GameFramework/PlayerState.h"
+#include "GameFramework/GameStateBase.h"
 #include "Misc/CommandLine.h"
 #include "HAL/IConsoleManager.h"
 
@@ -26,6 +29,14 @@ void UMultiplayerSessionsSubsystem::Initialize(FSubsystemCollectionBase& Collect
 {
 	Super::Initialize(Collection);
 	LobbyTickerHandle = FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateUObject(this, &ThisClass::HandleLobbyTicker), 0.5f);
+
+	// Dedicated-first BR flow:
+	// The dedicated server logs in and advertises a BattleRoyale staging session automatically.
+	if (IsRunningDedicatedServerInstance())
+	{
+		bDedicatedCreateSessionAfterLogin = true;
+		AutoLoginForCurrentRuntime();
+	}
 }
 
 void UMultiplayerSessionsSubsystem::Deinitialize()
@@ -98,7 +109,6 @@ void UMultiplayerSessionsSubsystem::AutoLoginForCurrentRuntime()
 	}
 
 	LoginWithPersistentAuth();
-	//LoginWithPortal();
 }
 
 FString UMultiplayerSessionsSubsystem::GetPlayerName() const
@@ -165,6 +175,17 @@ void UMultiplayerSessionsSubsystem::Login(EEOSLoginType LoginType)
 		{
 			LoggedInUserId = ExistingUserId->ToString();
 			SetConnectionState(EMultiplayerConnectionState::LoggedIn);
+
+			if (IsRunningDedicatedServerInstance() && bDedicatedCreateSessionAfterLogin && !bDedicatedSessionCreated)
+			{
+				bDedicatedSessionCreated = true;
+				CreateSession(LastNumPublicConnections, LastMatchType);
+			}
+			else
+			{
+				CreatePersonalParty();
+			}
+
 			UE_LOG(LogTemp, Log, TEXT("EOS já autenticado: %s"), *LoggedInUserId);
 			MultiplayerOnLoginComplete.Broadcast(true, TEXT(""));
 			return;
@@ -225,63 +246,216 @@ void UMultiplayerSessionsSubsystem::Login(EEOSLoginType LoginType)
 	}
 }
 
-void UMultiplayerSessionsSubsystem::OnLoginComplete(int32 LocalUserNum, bool bWasSuccessful, const FUniqueNetId& UserId, const FString& Error)
+void UMultiplayerSessionsSubsystem::OnLoginComplete(
+	int32 LocalUserNum,
+	bool bWasSuccessful,
+	const FUniqueNetId& UserId,
+	const FString& Error)
 {
-	if (IdentityInterface.IsValid() && LoginCompleteDelegateHandle.IsValid())
+	if (IdentityInterface.IsValid() &&
+		LoginCompleteDelegateHandle.IsValid())
 	{
-		IdentityInterface->ClearOnLoginCompleteDelegate_Handle(LocalUserNum, LoginCompleteDelegateHandle);
+		IdentityInterface->
+		ClearOnLoginCompleteDelegate_Handle(
+			LocalUserNum,
+			LoginCompleteDelegateHandle);
+
 		LoginCompleteDelegateHandle.Reset();
 	}
 
 	if (bWasSuccessful)
 	{
 		bIsLoggedIn = true;
-		LoggedInUserId = UserId.ToString();
+
+		LoggedInUserId =
+			UserId.ToString();
 
 		FString PlayerName = TEXT("Player");
 
-		// 🔥 PEGA NICK DO EOS
 		if (IdentityInterface.IsValid())
 		{
-			FString Nick = IdentityInterface->GetPlayerNickname(LocalUserNum);
+			const FString Nick =
+				IdentityInterface->GetPlayerNickname(
+					LocalUserNum
+				);
 
-			if (!Nick.IsEmpty())
-			{
-				PlayerName = Nick;
-			}
-			else
-			{
-				PlayerName = FString::Printf(TEXT("Player_%s"), *LoggedInUserId.Left(4));
-			}
+			PlayerName =
+				Nick.IsEmpty()
+				? FString::Printf(
+					TEXT("Player_%s"),
+					*LoggedInUserId.Left(4))
+				: Nick;
 		}
 
-		// 🔥 SETA NO PLAYER STATE (CRÍTICO)
-		if (UWorld* World = GetWorld())
+	
+		SetConnectionState(
+			EMultiplayerConnectionState::LoggedIn
+		);
+
+		if (IsRunningDedicatedServerInstance()
+			&& bDedicatedCreateSessionAfterLogin
+			&& !bDedicatedSessionCreated)
 		{
-			if (APlayerController* PC = World->GetFirstPlayerController())
-			{
-				if (APlayerState* PS = PC->PlayerState)
-				{
-					PS->SetPlayerName(PlayerName);
-				}
-			}
+			bDedicatedSessionCreated = true;
+
+			CreateSession(
+				LastNumPublicConnections,
+				LastMatchType
+			);
+		}
+		else
+		{
+			CreatePersonalParty();
 		}
 
-		SetConnectionState(EMultiplayerConnectionState::LoggedIn);
+		UE_LOG(
+			LogTemp,
+			Log,
+			TEXT(
+			"EOS Login SUCCESS: %s | Nick: %s"
+			),
+			*LoggedInUserId,
+			*PlayerName
+		);
 
-		UE_LOG(LogTemp, Log, TEXT("EOS Login SUCCESS: %s | Nick: %s"), *LoggedInUserId, *PlayerName);
-
-		MultiplayerOnLoginComplete.Broadcast(true, TEXT(""));
+		MultiplayerOnLoginComplete.Broadcast(
+			true,
+			TEXT("")
+		);
 	}
 	else
 	{
 		bIsLoggedIn = false;
-		LoggedInUserId.Empty();
-		SetConnectionState(EMultiplayerConnectionState::Disconnected);
 
-		UE_LOG(LogTemp, Error, TEXT("EOS Login FAILED: %s"), *Error);
-		MultiplayerOnLoginComplete.Broadcast(false, Error);
+		LoggedInUserId.Empty();
+
+		bInParty = false;
+
+		CachedPartyMembers.Empty();
+
+		SetConnectionState(
+			EMultiplayerConnectionState::Disconnected
+		);
+
+		UE_LOG(
+			LogTemp,
+			Error,
+			TEXT("EOS Login FAILED: %s"),
+			*Error
+		);
+
+		MultiplayerOnLoginComplete.Broadcast(
+			false,
+			Error
+		);
 	}
+}
+
+void UMultiplayerSessionsSubsystem::CreatePersonalParty()
+{
+	if (!bIsLoggedIn && !IsRunningDedicatedServerInstance())
+	{
+		return;
+	}
+
+	bInParty = true;
+	bLocalPlayerReady = false;
+	CachedPartyMembers = BuildPartySnapshot();
+	SetConnectionState(EMultiplayerConnectionState::InParty);
+	MultiplayerOnPartyUpdated.Broadcast();
+	MultiplayerOnReadyStateChanged.Broadcast(bLocalPlayerReady);
+}
+
+void UMultiplayerSessionsSubsystem::LeaveParty()
+{
+	bInParty = false;
+	bLocalPlayerReady = false;
+	CachedPartyMembers.Empty();
+	MultiplayerOnPartyUpdated.Broadcast();
+	MultiplayerOnReadyStateChanged.Broadcast(bLocalPlayerReady);
+	SetConnectionState(bIsLoggedIn ? EMultiplayerConnectionState::LoggedIn : EMultiplayerConnectionState::Disconnected);
+}
+
+void UMultiplayerSessionsSubsystem::SetPartyReady(bool bReady)
+{
+	SetLocalPlayerReady(bReady);
+	RefreshPartyData();
+}
+
+bool UMultiplayerSessionsSubsystem::IsPartyLeader() const
+{
+	if (!bInParty || CachedPartyMembers.Num() == 0)
+	{
+		return false;
+	}
+
+	for (const FMultiplayerPartyMemberInfo& Member : CachedPartyMembers)
+	{
+		if (Member.bIsLocalPlayer)
+		{
+			return Member.bIsLeader;
+		}
+	}
+
+	return CachedPartyMembers[0].bIsLeader;
+}
+
+bool UMultiplayerSessionsSubsystem::AreAllPartyMembersReady() const
+{
+	if (!bInParty || CachedPartyMembers.Num() == 0)
+	{
+		return false;
+	}
+
+	for (const FMultiplayerPartyMemberInfo& Member : CachedPartyMembers)
+	{
+		if (!Member.bIsReady)
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+
+bool UMultiplayerSessionsSubsystem::CanLaunchMatch() const
+{
+	return IsPartyLeader() && AreAllPartyMembersReady();
+}
+
+void UMultiplayerSessionsSubsystem::StartBattleRoyaleMatchmaking(int32 MaxPlayers, FString Playlist)
+{
+	if (!bIsLoggedIn && !IsRunningDedicatedServerInstance())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Cannot start matchmaking: not logged in."));
+		return;
+	}
+
+	if (!bInParty)
+	{
+		CreatePersonalParty();
+	}
+
+	// Para fluxo BR solo inicial: Play também marca o jogador local como Ready.
+	if (!bLocalPlayerReady)
+	{
+		SetPartyReady(true);
+	}
+
+	PendingBattleRoyaleMaxPlayers = FMath::Max(1, MaxPlayers);
+	PendingBattleRoyalePlaylist = Playlist.IsEmpty() ? TEXT("BattleRoyale") : Playlist;
+	LastNumPublicConnections = PendingBattleRoyaleMaxPlayers;
+	LastMatchType = PendingBattleRoyalePlaylist;
+
+	SetConnectionState(EMultiplayerConnectionState::Matchmaking);
+	bJoinFirstAvailableBattleRoyaleSession = true;
+	FindSessions(10000);
+}
+
+void UMultiplayerSessionsSubsystem::CancelMatchmaking()
+{
+	bJoinFirstAvailableBattleRoyaleSession = false;
+	SetConnectionState(bInParty ? EMultiplayerConnectionState::InParty : (bIsLoggedIn ? EMultiplayerConnectionState::LoggedIn : EMultiplayerConnectionState::Disconnected));
 }
 
 void UMultiplayerSessionsSubsystem::CreateSession(int32 NumPublicConnections, FString MatchType)
@@ -325,8 +499,11 @@ void UMultiplayerSessionsSubsystem::CreateSession(int32 NumPublicConnections, FS
 	LastSessionSettings->bIsDedicated = IsRunningDedicatedServerInstance();
 	LastSessionSettings->BuildUniqueId = 1;
 	LastSessionSettings->Set(FName("MatchType"), MatchType, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
+	LastSessionSettings->Set(FName("Playlist"), MatchType, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
+	LastSessionSettings->Set(FName("SessionPhase"), FString(TEXT("Staging")), EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
+	LastSessionSettings->Set(FName("MaxPlayers"), NumPublicConnections, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
 
-	UE_LOG(LogTemp, Log, TEXT("Creating Session... Dedicated: %s"), LastSessionSettings->bIsDedicated ? TEXT("true") : TEXT("false"));
+	UE_LOG(LogTemp, Log, TEXT("Creating Battle Royale Session... Players: %d | Playlist: %s | Dedicated: %s"), NumPublicConnections, *MatchType, LastSessionSettings->bIsDedicated ? TEXT("true") : TEXT("false"));
 
 	if (IsRunningDedicatedServerInstance())
 	{
@@ -342,6 +519,7 @@ void UMultiplayerSessionsSubsystem::CreateSession(int32 NumPublicConnections, FS
 	if (!LocalPlayer)
 	{
 		UE_LOG(LogTemp, Error, TEXT("LocalPlayer is NULL"));
+		SessionInterface->ClearOnCreateSessionCompleteDelegate_Handle(CreateSessionCompleteDelegateHandle);
 		MultiplayerOnCreateSessionComplete.Broadcast(false);
 		return;
 	}
@@ -350,6 +528,7 @@ void UMultiplayerSessionsSubsystem::CreateSession(int32 NumPublicConnections, FS
 	if (!UserId.IsValid())
 	{
 		UE_LOG(LogTemp, Error, TEXT("UserId INVALID"));
+		SessionInterface->ClearOnCreateSessionCompleteDelegate_Handle(CreateSessionCompleteDelegateHandle);
 		MultiplayerOnCreateSessionComplete.Broadcast(false);
 		return;
 	}
@@ -395,6 +574,36 @@ void UMultiplayerSessionsSubsystem::FindSessions(int32 MaxSearchResults)
 		SessionInterface->ClearOnFindSessionsCompleteDelegate_Handle(FindSessionsCompleteDelegateHandle);
 		MultiplayerOnFindSessionsComplete.Broadcast(TArray<FOnlineSessionSearchResult>(), false);
 	}
+}
+
+bool UMultiplayerSessionsSubsystem::TryJoinFirstAvailableBattleRoyaleSession()
+{
+	if (!LastSessionSearch.IsValid())
+	{
+		return false;
+	}
+
+	for (const FOnlineSessionSearchResult& Result : LastSessionSearch->SearchResults)
+	{
+		FString FoundMatchType;
+		Result.Session.SessionSettings.Get(FName("MatchType"), FoundMatchType);
+
+		FString SessionPhase;
+		Result.Session.SessionSettings.Get(FName("SessionPhase"), SessionPhase);
+
+		const bool bPlaylistMatches = FoundMatchType.IsEmpty() || FoundMatchType == PendingBattleRoyalePlaylist;
+		const bool bCanJoinPhase = SessionPhase.IsEmpty() || SessionPhase == TEXT("Staging");
+		const bool bHasOpenSlots = Result.Session.NumOpenPublicConnections > 0;
+
+		if (bPlaylistMatches && bCanJoinPhase && bHasOpenSlots)
+		{
+			UE_LOG(LogTemp, Log, TEXT("Battle Royale session found. Joining..."));
+			JoinSession(Result);
+			return true;
+		}
+	}
+
+	return false;
 }
 
 void UMultiplayerSessionsSubsystem::JoinSession(const FOnlineSessionSearchResult& SessionResult)
@@ -446,10 +655,41 @@ void UMultiplayerSessionsSubsystem::DestroySession()
 	}
 }
 
+void UMultiplayerSessionsSubsystem::OpenSessionInviteUI()
+{
+	IOnlineSubsystem* Subsystem = IOnlineSubsystem::Get();
+	if (!Subsystem)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Invite UI failed: OnlineSubsystem is invalid."));
+		MultiplayerOnInviteUIClosed.Broadcast(false);
+		return;
+	}
+
+	IOnlineExternalUIPtr ExternalUI = Subsystem->GetExternalUIInterface();
+	if (!ExternalUI.IsValid())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Invite UI failed: ExternalUIInterface is invalid."));
+		MultiplayerOnInviteUIClosed.Broadcast(false);
+		return;
+	}
+
+	if (!IsValidSessionInterface() || !SessionInterface->GetNamedSession(NAME_GameSession))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Invite UI failed: no active GameSession. Press PLAY and connect to staging lobby first."));
+		MultiplayerOnInviteUIClosed.Broadcast(false);
+		return;
+	}
+
+	const bool bOpened = ExternalUI->ShowInviteUI(0, NAME_GameSession);
+	UE_LOG(LogTemp, Log, TEXT("EOS Invite UI requested. Opened: %s"), bOpened ? TEXT("true") : TEXT("false"));
+	MultiplayerOnInviteUIClosed.Broadcast(bOpened);
+}
+
+
 void UMultiplayerSessionsSubsystem::LeaveLobby()
 {
 	DestroySession();
-	SetConnectionState(bIsLoggedIn ? EMultiplayerConnectionState::LoggedIn : EMultiplayerConnectionState::Disconnected);
+	SetConnectionState(bInParty ? EMultiplayerConnectionState::InParty : (bIsLoggedIn ? EMultiplayerConnectionState::LoggedIn : EMultiplayerConnectionState::Disconnected));
 	CachedLobbyPlayers.Empty();
 	CachedChatMessages.Empty();
 	MultiplayerOnLobbyUpdated.Broadcast();
@@ -501,6 +741,8 @@ void UMultiplayerSessionsSubsystem::SetLocalPlayerReady(bool bReady)
 			PC->ServerSetLobbyReadyState(bReady);
 		}
 	}
+
+	RefreshPartyData();
 }
 
 void UMultiplayerSessionsSubsystem::ToggleLocalVoiceEnabled()
@@ -543,6 +785,7 @@ void UMultiplayerSessionsSubsystem::ApplyVoiceEnabled(bool bEnabled)
 
 void UMultiplayerSessionsSubsystem::RefreshLobbyData()
 {
+	RefreshPartyData();
 	SyncLocalPlayerFlagsFromWorld();
 
 	const TArray<FMultiplayerLobbyPlayerInfo> NewPlayers = BuildLobbyPlayerSnapshot();
@@ -560,10 +803,40 @@ void UMultiplayerSessionsSubsystem::RefreshLobbyData()
 	}
 }
 
+void UMultiplayerSessionsSubsystem::RefreshPartyData()
+{
+	const TArray<FMultiplayerPartyMemberInfo> NewParty = BuildPartySnapshot();
+	if (HasPartySnapshotChanged(NewParty))
+	{
+		CachedPartyMembers = NewParty;
+		MultiplayerOnPartyUpdated.Broadcast();
+	}
+}
+
 bool UMultiplayerSessionsSubsystem::HandleLobbyTicker(float DeltaSeconds)
 {
 	RefreshLobbyData();
 	return true;
+}
+
+TArray<FMultiplayerPartyMemberInfo> UMultiplayerSessionsSubsystem::BuildPartySnapshot() const
+{
+	TArray<FMultiplayerPartyMemberInfo> Snapshot;
+
+	if (!bInParty)
+	{
+		return Snapshot;
+	}
+
+	FMultiplayerPartyMemberInfo LocalMember;
+	LocalMember.PlayerId = LoggedInUserId.IsEmpty() ? GetPlayerName() : LoggedInUserId;
+	LocalMember.PlayerName = GetPlayerName();
+	LocalMember.bIsReady = bLocalPlayerReady;
+	LocalMember.bIsLeader = true;
+	LocalMember.bIsLocalPlayer = true;
+	Snapshot.Add(LocalMember);
+
+	return Snapshot;
 }
 
 TArray<FMultiplayerLobbyPlayerInfo> UMultiplayerSessionsSubsystem::BuildLobbyPlayerSnapshot() const
@@ -623,6 +896,24 @@ TArray<FMultiplayerChatMessage> UMultiplayerSessionsSubsystem::BuildChatSnapshot
 	return {};
 }
 
+bool UMultiplayerSessionsSubsystem::HasPartySnapshotChanged(const TArray<FMultiplayerPartyMemberInfo>& NewSnapshot) const
+{
+	if (NewSnapshot.Num() != CachedPartyMembers.Num())
+	{
+		return true;
+	}
+
+	for (int32 Index = 0; Index < NewSnapshot.Num(); ++Index)
+	{
+		if (!(NewSnapshot[Index] == CachedPartyMembers[Index]))
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
 bool UMultiplayerSessionsSubsystem::HasLobbyPlayerSnapshotChanged(const TArray<FMultiplayerLobbyPlayerInfo>& NewSnapshot) const
 {
 	if (NewSnapshot.Num() != CachedLobbyPlayers.Num())
@@ -673,6 +964,7 @@ void UMultiplayerSessionsSubsystem::SyncLocalPlayerFlagsFromWorld()
 	{
 		bLocalPlayerReady = LobbyPlayerState->IsReady();
 		MultiplayerOnReadyStateChanged.Broadcast(bLocalPlayerReady);
+		RefreshPartyData();
 	}
 
 	if (bLocalVoiceEnabled != LobbyPlayerState->IsVoiceEnabled())
@@ -691,7 +983,12 @@ void UMultiplayerSessionsSubsystem::OnCreateSessionComplete(FName SessionName, b
 
 	if (bWasSuccessful)
 	{
-		SetConnectionState(EMultiplayerConnectionState::InLobby);
+		bJoinFirstAvailableBattleRoyaleSession = false;
+		SetConnectionState(EMultiplayerConnectionState::InStagingLobby);
+	}
+	else if (ConnectionState == EMultiplayerConnectionState::Matchmaking)
+	{
+		SetConnectionState(bInParty ? EMultiplayerConnectionState::InParty : EMultiplayerConnectionState::LoggedIn);
 	}
 
 	MultiplayerOnCreateSessionComplete.Broadcast(bWasSuccessful);
@@ -702,6 +999,21 @@ void UMultiplayerSessionsSubsystem::OnFindSessionsComplete(bool bWasSuccessful)
 	if (SessionInterface)
 	{
 		SessionInterface->ClearOnFindSessionsCompleteDelegate_Handle(FindSessionsCompleteDelegateHandle);
+	}
+
+	if (bJoinFirstAvailableBattleRoyaleSession)
+	{
+		bJoinFirstAvailableBattleRoyaleSession = false;
+
+		if (bWasSuccessful && TryJoinFirstAvailableBattleRoyaleSession())
+		{
+			return;
+		}
+
+		UE_LOG(LogTemp, Warning, TEXT("No dedicated Battle Royale staging session found. Start AstroDropServer first."));
+		SetConnectionState(bInParty ? EMultiplayerConnectionState::InParty : EMultiplayerConnectionState::LoggedIn);
+		MultiplayerOnFindSessionsComplete.Broadcast(TArray<FOnlineSessionSearchResult>(), false);
+		return;
 	}
 
 	if (!LastSessionSearch.IsValid() || LastSessionSearch->SearchResults.Num() == 0)
@@ -722,7 +1034,11 @@ void UMultiplayerSessionsSubsystem::OnJoinSessionComplete(FName SessionName, EOn
 
 	if (Result == EOnJoinSessionCompleteResult::Success)
 	{
-		SetConnectionState(EMultiplayerConnectionState::InLobby);
+		SetConnectionState(EMultiplayerConnectionState::InStagingLobby);
+	}
+	else if (ConnectionState == EMultiplayerConnectionState::Matchmaking)
+	{
+		SetConnectionState(bInParty ? EMultiplayerConnectionState::InParty : EMultiplayerConnectionState::LoggedIn);
 	}
 
 	MultiplayerOnJoinSessionComplete.Broadcast(Result);

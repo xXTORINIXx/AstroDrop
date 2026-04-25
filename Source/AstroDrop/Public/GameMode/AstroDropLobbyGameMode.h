@@ -21,14 +21,5 @@ public:
 
 protected:
 	void CheckStartMatch();
-
-	UPROPERTY(EditDefaultsOnly, Category="Match")
-	int32 PlayersToStartMatch = 2;
-
-	UPROPERTY(EditDefaultsOnly, Category="Match")
-	FString MatchMapPath =
-		TEXT("/Game/Maps/AstroDropMap");
-
-	UPROPERTY()
-	bool bMatchStarting = false;
+	
 };

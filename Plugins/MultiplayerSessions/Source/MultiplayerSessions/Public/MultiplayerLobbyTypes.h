@@ -9,6 +9,9 @@ enum class EMultiplayerConnectionState : uint8
 	Disconnected UMETA(DisplayName = "Disconnected"),
 	Connecting UMETA(DisplayName = "Connecting"),
 	LoggedIn UMETA(DisplayName = "Logged In"),
+	InParty UMETA(DisplayName = "In Party"),
+	Matchmaking UMETA(DisplayName = "Matchmaking"),
+	InStagingLobby UMETA(DisplayName = "In Staging Lobby"),
 	InLobby UMETA(DisplayName = "In Lobby"),
 	InMatch UMETA(DisplayName = "In Match")
 };
@@ -65,6 +68,36 @@ struct FMultiplayerLobbyPlayerInfo
 			&& PlayerName == Other.PlayerName
 			&& bIsReady == Other.bIsReady
 			&& bVoiceEnabled == Other.bVoiceEnabled
+			&& bIsLocalPlayer == Other.bIsLocalPlayer;
+	}
+};
+
+USTRUCT(BlueprintType)
+struct FMultiplayerPartyMemberInfo
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly)
+	FString PlayerId;
+
+	UPROPERTY(BlueprintReadOnly)
+	FString PlayerName;
+
+	UPROPERTY(BlueprintReadOnly)
+	bool bIsReady = false;
+
+	UPROPERTY(BlueprintReadOnly)
+	bool bIsLeader = false;
+
+	UPROPERTY(BlueprintReadOnly)
+	bool bIsLocalPlayer = false;
+
+	bool operator==(const FMultiplayerPartyMemberInfo& Other) const
+	{
+		return PlayerId == Other.PlayerId
+			&& PlayerName == Other.PlayerName
+			&& bIsReady == Other.bIsReady
+			&& bIsLeader == Other.bIsLeader
 			&& bIsLocalPlayer == Other.bIsLocalPlayer;
 	}
 };

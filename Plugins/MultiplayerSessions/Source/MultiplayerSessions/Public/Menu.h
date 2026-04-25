@@ -18,8 +18,8 @@ class MULTIPLAYERSESSIONS_API UMenu : public UUserWidget
 public:
 	UFUNCTION(BlueprintCallable)
 	void MenuSetup(
-		int32 NumberOfPublicConnections = 4,
-		FString TypeOfMatch = FString(TEXT("FreeForAll")),
+		int32 NumberOfPublicConnections = 100,
+		FString TypeOfMatch = FString(TEXT("BattleRoyale")),
 		FString LobbyPath = FString(TEXT("/Game/Maps/LobbyMap"))
 	);
 
@@ -34,10 +34,12 @@ private:
 	void UpdateStatus(const FText& Message);
 
 	void RefreshHeaderPanel();
+	void RefreshPartyPanel();
 	void RefreshLobbyPanel();
 	void RefreshChatPanel();
 	FText BuildConnectionStateText(EMultiplayerConnectionState State) const;
 	bool CanUseSubsystem() const;
+	bool CanUsePartyActions() const;
 	bool CanUseLobbyActions() const;
 	void BindSubsystemDelegates();
 	void UnbindSubsystemDelegates();
@@ -47,18 +49,27 @@ private:
 	UMultiplayerSessionsSubsystem* MultiplayerSessionsSubsystem = nullptr;
 
 	FString PathToLobby;
-	int32 NumPublicConnections = 4;
-	FString MatchType = TEXT("FreeForAll");
+	int32 NumPublicConnections = 100;
+	FString MatchType = TEXT("BattleRoyale");
 
 	bool bTriedPortalLogin = false;
 	bool bMenuInitialized = false;
 
 private:
-	UPROPERTY(meta = (BindWidget))
+	// Battle Royale menu buttons. PlayButton is optional for new WBP.
+	// HostButton is kept for compatibility with your current WBP and behaves like Play.
+	UPROPERTY(meta = (BindWidgetOptional))
+	UButton* PlayButton = nullptr;
+
+	UPROPERTY(meta = (BindWidgetOptional))
 	UButton* HostButton = nullptr;
 
-	UPROPERTY(meta = (BindWidget))
+	// Optional/debug. JoinButton still searches existing staging lobbies.
+	UPROPERTY(meta = (BindWidgetOptional))
 	UButton* JoinButton = nullptr;
+
+	UPROPERTY(meta = (BindWidgetOptional))
+	UButton* InviteButton = nullptr;
 
 	UPROPERTY(meta = (BindWidgetOptional))
 	UButton* ReadyButton = nullptr;
@@ -97,14 +108,23 @@ private:
 	UTextBlock* PlayerListText = nullptr;
 
 	UPROPERTY(meta = (BindWidgetOptional))
+	UTextBlock* PartyListText = nullptr;
+
+	UPROPERTY(meta = (BindWidgetOptional))
 	UTextBlock* ChatHistoryText = nullptr;
 
 private:
+	UFUNCTION()
+	void PlayButtonClicked();
+
 	UFUNCTION()
 	void HostButtonClicked();
 
 	UFUNCTION()
 	void JoinButtonClicked();
+
+	UFUNCTION()
+	void InviteButtonClicked();
 
 	UFUNCTION()
 	void ReadyButtonClicked();
@@ -138,6 +158,9 @@ private:
 
 	UFUNCTION()
 	void OnLobbyUpdated();
+
+	UFUNCTION()
+	void OnPartyUpdated();
 
 	UFUNCTION()
 	void OnChatUpdated();

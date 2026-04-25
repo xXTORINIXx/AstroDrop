@@ -6,13 +6,43 @@
 #include "EnhancedInputSubsystems.h"
 #include "AstroDrop/AstroDrop.h"
 #include "Blueprint/UserWidget.h"
+#include "GameFramework/PlayerState.h"
 #include "Widgets/Input/SVirtualJoystick.h"
 
+
+void AAstroDropPlayerController::ClientSetEOSNickname_Implementation(const FString& Nickname)
+{
+	if (PlayerState)
+	{
+		PlayerState->SetPlayerName(Nickname);
+
+		PlayerState->OnRep_PlayerName();
+
+		PlayerState->ForceNetUpdate();
+
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("Nickname synced: %s"),
+			*Nickname
+		);
+	}
+}
 
 void AAstroDropPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
 
+	if (PlayerState)
+	{
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("PlayerState Name: %s"),
+			*PlayerState->GetPlayerName()
+		);
+	}
+	
 	if (ShouldUseTouchControls() && IsLocalPlayerController())
 	{
 		MobileControlsWidget = CreateWidget<UUserWidget>(this, MobileControlsWidgetClass);

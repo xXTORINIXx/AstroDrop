@@ -23,6 +23,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FMultiplayerOnDestroySessionComplete
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FMultiplayerOnStartSessionComplete, bool, bWasSuccessful);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FMultiplayerOnLoginComplete, bool, bWasSuccessful, const FString&, ErrorMessage);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FMultiplayerOnLobbyUpdated);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FMultiplayerOnPartyUpdated);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FMultiplayerOnInviteUIClosed, bool, bWasOpened);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FMultiplayerOnVoiceEnabledChanged, bool, bVoiceEnabled);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FMultiplayerOnReadyStateChanged, bool, bReady);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FMultiplayerOnConnectionStateChanged, EMultiplayerConnectionState, NewState);
@@ -57,6 +59,27 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void AutoLoginForCurrentRuntime();
+
+	// Battle Royale / Party flow
+	UFUNCTION(BlueprintCallable)
+	void CreatePersonalParty();
+
+	UFUNCTION(BlueprintCallable)
+	void LeaveParty();
+
+	UFUNCTION(BlueprintCallable)
+	void SetPartyReady(bool bReady);
+
+	UFUNCTION(BlueprintCallable)
+	void StartBattleRoyaleMatchmaking(int32 MaxPlayers, FString Playlist);
+
+	UFUNCTION(BlueprintCallable)
+	void CancelMatchmaking();
+
+	// Opens the EOS/Epic session invite overlay for the current GameSession.
+	// Use after PLAY connected the player to the staging lobby/dedicated session.
+	UFUNCTION(BlueprintCallable)
+	void OpenSessionInviteUI();
 
 	UFUNCTION(BlueprintCallable)
 	void LeaveLobby();
@@ -98,6 +121,21 @@ public:
 	EEOSLoginType GetCurrentLoginType() const { return CurrentLoginType; }
 
 	UFUNCTION(BlueprintPure)
+	bool IsInParty() const { return bInParty; }
+
+	UFUNCTION(BlueprintPure)
+	bool IsPartyLeader() const;
+
+	UFUNCTION(BlueprintPure)
+	bool AreAllPartyMembersReady() const;
+
+	UFUNCTION(BlueprintPure)
+	bool CanLaunchMatch() const;
+
+	UFUNCTION(BlueprintPure)
+	const TArray<FMultiplayerPartyMemberInfo>& GetPartyMembers() const { return CachedPartyMembers; }
+
+	UFUNCTION(BlueprintPure)
 	const TArray<FMultiplayerLobbyPlayerInfo>& GetLobbyPlayers() const { return CachedLobbyPlayers; }
 
 	UFUNCTION(BlueprintPure)
@@ -119,6 +157,9 @@ public:
 	FMultiplayerOnLobbyUpdated MultiplayerOnChatUpdated;
 
 	UPROPERTY(BlueprintAssignable)
+	FMultiplayerOnPartyUpdated MultiplayerOnPartyUpdated;
+
+	UPROPERTY(BlueprintAssignable)
 	FMultiplayerOnVoiceEnabledChanged MultiplayerOnVoiceEnabledChanged;
 
 	UPROPERTY(BlueprintAssignable)
@@ -126,7 +167,9 @@ public:
 
 	UPROPERTY(BlueprintAssignable)
 	FMultiplayerOnConnectionStateChanged MultiplayerOnConnectionStateChanged;
-
+	
+	UPROPERTY(BlueprintAssignable)
+	FMultiplayerOnInviteUIClosed MultiplayerOnInviteUIClosed;
 protected:
 	void OnCreateSessionComplete(FName SessionName, bool bWasSuccessful);
 	void OnFindSessionsComplete(bool bWasSuccessful);
@@ -162,30 +205,41 @@ private:
 	FTSTicker::FDelegateHandle LobbyTickerHandle;
 
 	bool bCreateSessionOnDestroy = false;
-	int32 LastNumPublicConnections = 4;
-	FString LastMatchType = TEXT("FreeForAll");
+	int32 LastNumPublicConnections = 100;
+	FString LastMatchType = TEXT("BattleRoyale");
 
 	bool bIsLoggedIn = false;
 	bool bLocalPlayerReady = false;
 	bool bLocalVoiceEnabled = true;
+	bool bInParty = false;
+	bool bJoinFirstAvailableBattleRoyaleSession = false;
+	bool bDedicatedCreateSessionAfterLogin = false;
+	bool bDedicatedSessionCreated = false;
+	int32 PendingBattleRoyaleMaxPlayers = 100;
+	FString PendingBattleRoyalePlaylist = TEXT("BattleRoyale");
 	FString LoggedInUserId;
 	EEOSLoginType CurrentLoginType = EEOSLoginType::AccountPortal;
 	EMultiplayerConnectionState ConnectionState = EMultiplayerConnectionState::Disconnected;
 
+	TArray<FMultiplayerPartyMemberInfo> CachedPartyMembers;
 	TArray<FMultiplayerLobbyPlayerInfo> CachedLobbyPlayers;
 	TArray<FMultiplayerChatMessage> CachedChatMessages;
 
 	void Login(EEOSLoginType LoginType);
 	void SetConnectionState(EMultiplayerConnectionState NewState);
 	bool HandleLobbyTicker(float DeltaSeconds);
+	bool HasPartySnapshotChanged(const TArray<FMultiplayerPartyMemberInfo>& NewSnapshot) const;
 	bool HasLobbyPlayerSnapshotChanged(const TArray<FMultiplayerLobbyPlayerInfo>& NewSnapshot) const;
 	bool HasChatSnapshotChanged(const TArray<FMultiplayerChatMessage>& NewSnapshot) const;
+	TArray<FMultiplayerPartyMemberInfo> BuildPartySnapshot() const;
 	TArray<FMultiplayerLobbyPlayerInfo> BuildLobbyPlayerSnapshot() const;
 	TArray<FMultiplayerChatMessage> BuildChatSnapshot() const;
+	void RefreshPartyData();
 	void SyncLocalPlayerFlagsFromWorld();
 	void ApplyVoiceEnabled(bool bEnabled);
 	FString BuildDedicatedServerAddress() const;
 	bool IsUsingEOS() const;
 	bool IsRunningDedicatedServerInstance() const;
+	bool TryJoinFirstAvailableBattleRoyaleSession();
 	void OnLoginComplete(int32 LocalUserNum, bool bWasSuccessful, const FUniqueNetId& UserId, const FString& Error);
 };

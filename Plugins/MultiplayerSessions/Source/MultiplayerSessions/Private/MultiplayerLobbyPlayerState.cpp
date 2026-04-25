@@ -18,7 +18,21 @@ void AMultiplayerLobbyPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimePr
 
 void AMultiplayerLobbyPlayerState::SetReadyState(bool bInReady)
 {
+	if (bIsReady == bInReady)
+	{
+		return;
+	}
+
 	bIsReady = bInReady;
+	ForceNetUpdate();
+
+	if (HasAuthority())
+	{
+		if (AMultiplayerLobbyGameMode* GM = GetWorld() ? GetWorld()->GetAuthGameMode<AMultiplayerLobbyGameMode>() : nullptr)
+		{
+			GM->PlayerReadyChanged();
+		}
+	}
 }
 
 void AMultiplayerLobbyPlayerState::SetVoiceEnabled(bool bInVoiceEnabled)
