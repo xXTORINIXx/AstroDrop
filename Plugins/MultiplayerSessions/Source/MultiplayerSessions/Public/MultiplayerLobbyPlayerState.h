@@ -15,8 +15,11 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	UFUNCTION(BlueprintCallable)
-	void SetReadyState(bool bInReady);
+	virtual void SetReadyState(bool bInReady);
 
+	UFUNCTION(BlueprintCallable)
+	bool GetReadyState() const { return bIsReady; }
+	
 	UFUNCTION(BlueprintPure)
 	bool IsReady() const { return bIsReady; }
 

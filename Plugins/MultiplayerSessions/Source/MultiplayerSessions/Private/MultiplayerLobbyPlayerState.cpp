@@ -1,4 +1,6 @@
 #include "MultiplayerLobbyPlayerState.h"
+
+#include "MultiplayerLobbyGameMode.h"
 #include "Net/UnrealNetwork.h"
 
 AMultiplayerLobbyPlayerState::AMultiplayerLobbyPlayerState()

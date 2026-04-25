@@ -9,6 +9,7 @@
 #include "Components/CapsuleComponent.h"
 #include "Components/WidgetComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "HUD/OverheadWidget.h"
 
 // Sets default values
 AAstroDropCharacter::AAstroDropCharacter()
@@ -87,6 +88,20 @@ void AAstroDropCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 		       TEXT(
 			       "'%s' Failed to find an Enhanced Input component! This template is built to use the Enhanced Input system. If you intend to use the legacy system, then you will need to update this C++ file."
 		       ), *GetNameSafe(this));
+	}
+}
+
+void AAstroDropCharacter::OnRep_PlayerState()
+{
+	Super::OnRep_PlayerState();
+	if (OverheadWidget)
+	{
+		if (UOverheadWidget* OH =
+			Cast<UOverheadWidget>(
+				OverheadWidget->GetUserWidgetObject()))
+		{
+			OH->ShowPlayerName(this);
+		}
 	}
 }
 

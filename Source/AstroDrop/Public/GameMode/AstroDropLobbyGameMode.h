@@ -1,27 +1,34 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
 #include "MultiplayerLobbyGameMode.h"
 #include "AstroDropLobbyGameMode.generated.h"
 
-/**
- * 
- */
 UCLASS()
-class ASTRODROP_API AAstroDropLobbyGameMode : public AMultiplayerLobbyGameMode
+class ASTRODROP_API AAstroDropLobbyGameMode
+	: public AMultiplayerLobbyGameMode
 {
 	GENERATED_BODY()
+
 public:
 	AAstroDropLobbyGameMode();
-	virtual void PostLogin(APlayerController* NewPlayer) override;
+
+	virtual void PostLogin(
+		APlayerController* NewPlayer
+	) override;
+
+	void PlayerReadyChanged();
 
 protected:
-	UPROPERTY(EditDefaultsOnly, Category = "Lobby")
+	void CheckStartMatch();
+
+	UPROPERTY(EditDefaultsOnly, Category="Match")
 	int32 PlayersToStartMatch = 2;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Lobby")
-	FString MatchMapPath = TEXT("/Game/Maps/BlasterMap");
-		
+	UPROPERTY(EditDefaultsOnly, Category="Match")
+	FString MatchMapPath =
+		TEXT("/Game/Maps/AstroDropMap");
+
+	UPROPERTY()
+	bool bMatchStarting = false;
 };

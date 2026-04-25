@@ -1,34 +1,40 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "HUD/OverheadWidget.h"
 
 #include "Components/TextBlock.h"
+#include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerState.h"
-
 
 void UOverheadWidget::SetDisplayText(FString TextToDisplay)
 {
 	if (DisplayText)
 	{
-		DisplayText->SetText(FText::FromString(TextToDisplay));
+		DisplayText->SetText(
+			FText::FromString(TextToDisplay)
+		);
 	}
 }
 
 void UOverheadWidget::ShowPlayerName(APawn* InPawn)
 {
-	if (!InPawn) return;
-
-	FString PlayerName = "Unknown";
-
-	if (APlayerState* PS = InPawn->GetPlayerState())
+	if (!InPawn)
 	{
-		PlayerName = PS->GetPlayerName();
+		SetDisplayText(TEXT("Unknown"));
+		return;
 	}
 
-	if (PlayerName.IsEmpty())
+	FString PlayerName = TEXT("Player");
+
+	APlayerState* PS = InPawn->GetPlayerState();
+
+	if (PS)
 	{
-		PlayerName = "Player";
+		const FString ReplicatedName =
+			PS->GetPlayerName();
+
+		if (!ReplicatedName.IsEmpty())
+		{
+			PlayerName = ReplicatedName;
+		}
 	}
 
 	SetDisplayText(PlayerName);
@@ -36,30 +42,44 @@ void UOverheadWidget::ShowPlayerName(APawn* InPawn)
 
 void UOverheadWidget::ShowPlayerNetRole(APawn* InPawn)
 {
-	ENetRole RemoteRole = InPawn->GetRemoteRole();
-	FString Role;
-	switch (RemoteRole)
+	if (!InPawn)
 	{
-	case ENetRole::ROLE_Authority:
-		Role = FString("Authority");
+		SetDisplayText(TEXT("No Pawn"));
+		return;
+	}
+
+	FString Role;
+
+	switch (InPawn->GetRemoteRole())
+	{
+	case ROLE_Authority:
+		Role = TEXT("Authority");
 		break;
-	case ENetRole::ROLE_AutonomousProxy:
-		Role = FString("Autonomous Proxy");
+
+	case ROLE_AutonomousProxy:
+		Role = TEXT("Autonomous Proxy");
 		break;
-	case ENetRole::ROLE_SimulatedProxy:
-		Role = FString("Simulated Proxy");
+
+	case ROLE_SimulatedProxy:
+		Role = TEXT("Simulated Proxy");
 		break;
-	case ENetRole::ROLE_None:
-		Role = FString("None");
+
+	case ROLE_None:
+	default:
+		Role = TEXT("None");
 		break;
 	}
-	FString RemoteRoleString = FString::Printf(TEXT("Remote Role: %s"), *Role);
-	SetDisplayText(RemoteRoleString);
+
+	FString RoleString =
+		FString::Printf(
+			TEXT("Remote Role: %s"),
+			*Role
+		);
+
+	SetDisplayText(RoleString);
 }
 
 void UOverheadWidget::NativeDestruct()
 {
 	Super::NativeDestruct();
 }
-
-
