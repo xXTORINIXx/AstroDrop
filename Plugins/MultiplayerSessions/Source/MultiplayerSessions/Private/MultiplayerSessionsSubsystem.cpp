@@ -138,7 +138,7 @@ FString UMultiplayerSessionsSubsystem::BuildDedicatedServerAddress() const
 		return Value;
 	}
 
-	return TEXT("127.0.0.1:8081");
+	return TEXT("127.0.0.1:6547");
 }
 
 void UMultiplayerSessionsSubsystem::Login(EEOSLoginType LoginType)

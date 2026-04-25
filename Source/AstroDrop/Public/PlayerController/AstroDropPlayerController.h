@@ -43,6 +43,7 @@ protected:
 	UPROPERTY(EditAnywhere, Config, Category = "Input|Touch Controls")
 	bool bForceTouchControls = false;
 
+	void ClientSetEOSNickname_Implementation(const FString& Nickname);
 	/** Gameplay initialization */
 	virtual void BeginPlay() override;
 

@@ -32,6 +32,10 @@ void AAstroDropPlayerController::ClientSetEOSNickname_Implementation(const FStri
 void AAstroDropPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
+	if (GetNetMode() == NM_DedicatedServer)
+	{
+		return;
+	}
 
 	if (PlayerState)
 	{
@@ -42,7 +46,7 @@ void AAstroDropPlayerController::BeginPlay()
 			*PlayerState->GetPlayerName()
 		);
 	}
-	
+
 	if (ShouldUseTouchControls() && IsLocalPlayerController())
 	{
 		MobileControlsWidget = CreateWidget<UUserWidget>(this, MobileControlsWidgetClass);
@@ -64,7 +68,8 @@ void AAstroDropPlayerController::SetupInputComponent()
 
 	if (IsLocalPlayerController())
 	{
-		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer()))
+		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<
+			UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer()))
 		{
 			for (UInputMappingContext* CurrentContext : DefaultMappingContexts)
 			{
@@ -84,8 +89,9 @@ void AAstroDropPlayerController::SetupInputComponent()
 
 bool AAstroDropPlayerController::ShouldUseTouchControls() const
 {
+	if (GetNetMode() == NM_DedicatedServer)
+	{
+		return false;
+	}
 	return SVirtualJoystick::ShouldDisplayTouchInterface() || bForceTouchControls;
 }
-
-
-
