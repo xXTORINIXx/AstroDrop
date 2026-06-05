@@ -24,6 +24,7 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	virtual void OnRep_PlayerState() override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	virtual void PostInitializeComponents() override;
 	
 	/** Handles move inputs from either controls or UI interfaces */
 	UFUNCTION(BlueprintCallable, Category="Input")
@@ -71,6 +72,14 @@ protected:
 
 	/** Called for looking input */
 	void Look(const FInputActionValue& Value);
+	
+	/** Called for equip input */
+	UPROPERTY(EditAnywhere, Category="Input")
+	UInputAction* EquipAction;
+	
+	void EquipButtonPressed();
+
+	
 
 private:
 	UPROPERTY(VisibleAnywhere, Category = Camera)
@@ -87,7 +96,9 @@ private:
 
 	UFUNCTION()
 	void OnRep_OverlappingWeapon(AWeapon* LastWeapon);
-
+	
+	UPROPERTY(VisibleAnywhere)
+	class UCombatComponent* Combat;
 public:	
 	void SetOverlappingWeapon(AWeapon* Weapon);
 };

@@ -27,6 +27,7 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 	void ShowPickupWidget(bool bShowWidget);
+	FORCEINLINE void SetWeaponState(EWeaponState State) { WeaponState = State; }
 
 protected:
 	// Called when the game starts or when spawned

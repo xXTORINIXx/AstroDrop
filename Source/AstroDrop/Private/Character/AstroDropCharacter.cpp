@@ -7,6 +7,7 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
+#include "Components/CombatComponent.h"
 #include "Components/WidgetComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "HUD/OverheadWidget.h"
@@ -54,20 +55,17 @@ AAstroDropCharacter::AAstroDropCharacter()
 	
 	OverheadWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("OverheadWidget"));
 	OverheadWidget->SetupAttachment(RootComponent);
+	
+	Combat = CreateDefaultSubobject<UCombatComponent>(TEXT("CombatComponent"));
+	Combat->SetIsReplicated(true);
 }
-
-// Called when the game starts or when spawned
-void AAstroDropCharacter::BeginPlay()
-{
-	Super::BeginPlay();
-}
-
 
 // Called every frame
 void AAstroDropCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 }
+
 
 // Called to bind functionality to input
 void AAstroDropCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -85,6 +83,9 @@ void AAstroDropCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 
 		// Looking
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &AAstroDropCharacter::Look);
+		
+		// Looking
+		EnhancedInputComponent->BindAction(EquipAction, ETriggerEvent::Started, this, &AAstroDropCharacter::EquipButtonPressed);
 	}
 	else
 	{
@@ -115,6 +116,63 @@ void AAstroDropCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& 
 	DOREPLIFETIME_CONDITION(AAstroDropCharacter, OverlappingWeapon, COND_OwnerOnly);
 }
 
+void AAstroDropCharacter::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+	if (Combat)
+	{
+		Combat->Character = this;
+	}
+}
+
+void AAstroDropCharacter::DoMove(float Right, float Forward)
+{
+	if (GetController() != nullptr)
+	{
+		// find out which way is forward
+		const FRotator Rotation = GetController()->GetControlRotation();
+		const FRotator YawRotation(0, Rotation.Yaw, 0);
+
+		// get forward vector
+		const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
+
+		// get right vector 
+		const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
+
+		// add movement 
+		AddMovementInput(ForwardDirection, Forward);
+		AddMovementInput(RightDirection, Right);
+	}
+}
+
+
+void AAstroDropCharacter::DoLook(float Yaw, float Pitch)
+{
+	if (GetController() != nullptr)
+	{
+		// add yaw and pitch input to controller
+		AddControllerYawInput(Yaw);
+		AddControllerPitchInput(Pitch);
+	}
+}
+
+void AAstroDropCharacter::DoJumpStart()
+{
+	// signal the character to jump
+	Jump();
+}
+
+void AAstroDropCharacter::DoJumpEnd()
+{
+	// signal the character to stop jumping
+	StopJumping();
+}
+
+// Called when the game starts or when spawned
+void AAstroDropCharacter::BeginPlay()
+{
+	Super::BeginPlay();
+}
 
 void AAstroDropCharacter::Move(const FInputActionValue& Value)
 {
@@ -132,6 +190,14 @@ void AAstroDropCharacter::Look(const FInputActionValue& Value)
 
 	// route the input
 	DoLook(LookAxisVector.X, LookAxisVector.Y);
+}
+
+void AAstroDropCharacter::EquipButtonPressed()
+{
+	if (Combat && HasAuthority())
+	{
+		Combat->EquipWeapon(OverlappingWeapon);
+	}
 }
 
 void AAstroDropCharacter::OnRep_OverlappingWeapon(AWeapon* LastWeapon)
@@ -160,46 +226,4 @@ void AAstroDropCharacter::SetOverlappingWeapon(AWeapon* Weapon)
 			OverlappingWeapon->ShowPickupWidget(true);
 		}
 	}
-}
-
-void AAstroDropCharacter::DoMove(float Right, float Forward)
-{
-	if (GetController() != nullptr)
-	{
-		// find out which way is forward
-		const FRotator Rotation = GetController()->GetControlRotation();
-		const FRotator YawRotation(0, Rotation.Yaw, 0);
-
-		// get forward vector
-		const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
-
-		// get right vector 
-		const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
-
-		// add movement 
-		AddMovementInput(ForwardDirection, Forward);
-		AddMovementInput(RightDirection, Right);
-	}
-}
-
-void AAstroDropCharacter::DoLook(float Yaw, float Pitch)
-{
-	if (GetController() != nullptr)
-	{
-		// add yaw and pitch input to controller
-		AddControllerYawInput(Yaw);
-		AddControllerPitchInput(Pitch);
-	}
-}
-
-void AAstroDropCharacter::DoJumpStart()
-{
-	// signal the character to jump
-	Jump();
-}
-
-void AAstroDropCharacter::DoJumpEnd()
-{
-	// signal the character to stop jumping
-	StopJumping();
 }
