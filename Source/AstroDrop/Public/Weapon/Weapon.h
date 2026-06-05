@@ -26,6 +26,7 @@ public:
 	AWeapon();
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
+	void ShowPickupWidget(bool bShowWidget);
 
 protected:
 	// Called when the game starts or when spawned

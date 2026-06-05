@@ -51,20 +51,20 @@ void AWeapon::BeginPlay()
 void AWeapon::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	AAstroDropCharacter* BlasterCharacter = Cast<AAstroDropCharacter>(OtherActor);
-	if (BlasterCharacter && PickupWidget)
+	AAstroDropCharacter* AstroDropCharacter = Cast<AAstroDropCharacter>(OtherActor);
+	if (AstroDropCharacter)
 	{
-		PickupWidget->SetVisibility(true);
+		AstroDropCharacter->SetOverlappingWeapon(this);
 	}
 }
 
 void AWeapon::OnSphereEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
-	AAstroDropCharacter* BlasterCharacter = Cast<AAstroDropCharacter>(OtherActor);
-	if (BlasterCharacter && PickupWidget)
+	AAstroDropCharacter* AstroDropCharacter = Cast<AAstroDropCharacter>(OtherActor);
+	if (AstroDropCharacter)
 	{
-		PickupWidget->SetVisibility(false);
+		AstroDropCharacter->SetOverlappingWeapon(nullptr);
 	}
 }
 
@@ -72,5 +72,13 @@ void AWeapon::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+}
+
+void AWeapon::ShowPickupWidget(bool bShowWidget)
+{
+	if (PickupWidget)
+	{
+		PickupWidget->SetVisibility(bShowWidget);
+	}
 }
 

@@ -10,6 +10,8 @@
 #include "Components/WidgetComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "HUD/OverheadWidget.h"
+#include "Net/UnrealNetwork.h"
+#include "Weapon/Weapon.h"
 
 // Sets default values
 AAstroDropCharacter::AAstroDropCharacter()
@@ -107,6 +109,12 @@ void AAstroDropCharacter::OnRep_PlayerState()
 	}
 }
 
+void AAstroDropCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME_CONDITION(AAstroDropCharacter, OverlappingWeapon, COND_OwnerOnly);
+}
+
 
 void AAstroDropCharacter::Move(const FInputActionValue& Value)
 {
@@ -124,6 +132,34 @@ void AAstroDropCharacter::Look(const FInputActionValue& Value)
 
 	// route the input
 	DoLook(LookAxisVector.X, LookAxisVector.Y);
+}
+
+void AAstroDropCharacter::OnRep_OverlappingWeapon(AWeapon* LastWeapon)
+{
+	if (OverlappingWeapon)
+	{
+		OverlappingWeapon->ShowPickupWidget(true);
+	}
+	if (LastWeapon)
+	{
+		LastWeapon->ShowPickupWidget(false);
+	}
+}
+
+void AAstroDropCharacter::SetOverlappingWeapon(AWeapon* Weapon)
+{
+	if (OverlappingWeapon)
+	{
+		OverlappingWeapon->ShowPickupWidget(false);
+	}
+	OverlappingWeapon = Weapon;
+	if (IsLocallyControlled())
+	{
+		if (OverlappingWeapon)
+		{
+			OverlappingWeapon->ShowPickupWidget(true);
+		}
+	}
 }
 
 void AAstroDropCharacter::DoMove(float Right, float Forward)
