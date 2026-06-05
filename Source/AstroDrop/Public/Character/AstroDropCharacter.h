@@ -78,6 +78,9 @@ protected:
 	UInputAction* EquipAction;
 	
 	void EquipButtonPressed();
+	
+	UFUNCTION(Server, Reliable)
+	void ServerEquipButtonPressed();
 
 	
 
