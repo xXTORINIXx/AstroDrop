@@ -104,4 +104,5 @@ private:
 	class UCombatComponent* Combat;
 public:	
 	void SetOverlappingWeapon(AWeapon* Weapon);
+	bool IsWeaponEquipped();
 };

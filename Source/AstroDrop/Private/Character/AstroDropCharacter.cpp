@@ -242,3 +242,8 @@ void AAstroDropCharacter::SetOverlappingWeapon(AWeapon* Weapon)
 		}
 	}
 }
+
+bool AAstroDropCharacter::IsWeaponEquipped()
+{
+	return (Combat && Combat->EquippedWeapon);
+}
