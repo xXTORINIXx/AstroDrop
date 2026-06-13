@@ -87,6 +87,13 @@ protected:
 	UInputAction* CrouchAction;
 	
 	void CrouchButtonPressed();
+	
+	/** Called for equip input */
+	UPROPERTY(EditAnywhere, Category="Input")
+	UInputAction* AimAction;
+	
+	void AimButtonPressed();
+	void AimButtonReleased();
 
 	
 
@@ -111,4 +118,5 @@ private:
 public:	
 	void SetOverlappingWeapon(AWeapon* Weapon);
 	bool IsWeaponEquipped();
+	bool IsAiming();
 };

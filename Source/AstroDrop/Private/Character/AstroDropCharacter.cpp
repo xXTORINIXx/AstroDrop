@@ -89,6 +89,10 @@ void AAstroDropCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 		
 		// Crouch
 		EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Started, this, &AAstroDropCharacter::CrouchButtonPressed);
+		
+		// Aiming
+		EnhancedInputComponent->BindAction(AimAction, ETriggerEvent::Started, this, &AAstroDropCharacter::AimButtonPressed);
+		EnhancedInputComponent->BindAction(AimAction, ETriggerEvent::Completed, this, &AAstroDropCharacter::AimButtonReleased);
 	}
 	else
 	{
@@ -222,6 +226,22 @@ void AAstroDropCharacter::CrouchButtonPressed()
 	}
 }
 
+void AAstroDropCharacter::AimButtonPressed()
+{
+	if (Combat)
+	{
+		Combat->SetAiming(true);
+	}
+}
+
+void AAstroDropCharacter::AimButtonReleased()
+{
+	if (Combat)
+	{
+		Combat->SetAiming(false);
+	}
+}
+
 void AAstroDropCharacter::ServerEquipButtonPressed_Implementation()
 {
 	if (Combat)
@@ -261,4 +281,9 @@ void AAstroDropCharacter::SetOverlappingWeapon(AWeapon* Weapon)
 bool AAstroDropCharacter::IsWeaponEquipped()
 {
 	return (Combat && Combat->EquippedWeapon);
+}
+
+bool AAstroDropCharacter::IsAiming()
+{
+	return (Combat && Combat->bAiming);
 }
