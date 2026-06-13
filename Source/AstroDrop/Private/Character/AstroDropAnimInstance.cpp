@@ -28,4 +28,5 @@ void UAstroDropAnimInstance::NativeUpdateAnimation(float DeltaTime)
 	bIsInAir = AstroDropCharacter->GetCharacterMovement()->IsFalling();
 	bIsAccelerating = AstroDropCharacter->GetCharacterMovement()->GetCurrentAcceleration().Size() > 0.f ? true : false;
 	bWeaponEquipped = AstroDropCharacter->IsWeaponEquipped();
+	bIsCrouched = AstroDropCharacter->bIsCrouched;
 }

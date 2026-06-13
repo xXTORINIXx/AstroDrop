@@ -81,6 +81,12 @@ protected:
 	
 	UFUNCTION(Server, Reliable)
 	void ServerEquipButtonPressed();
+	
+	/** Called for equip input */
+	UPROPERTY(EditAnywhere, Category="Input")
+	UInputAction* CrouchAction;
+	
+	void CrouchButtonPressed();
 
 	
 

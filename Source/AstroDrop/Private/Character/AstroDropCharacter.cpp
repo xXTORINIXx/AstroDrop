@@ -84,8 +84,11 @@ void AAstroDropCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 		// Looking
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &AAstroDropCharacter::Look);
 		
-		// Looking
+		// Equipped
 		EnhancedInputComponent->BindAction(EquipAction, ETriggerEvent::Started, this, &AAstroDropCharacter::EquipButtonPressed);
+		
+		// Crouch
+		EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Started, this, &AAstroDropCharacter::CrouchButtonPressed);
 	}
 	else
 	{
@@ -204,6 +207,18 @@ void AAstroDropCharacter::EquipButtonPressed()
 		{
 			ServerEquipButtonPressed();
 		}
+	}
+}
+
+void AAstroDropCharacter::CrouchButtonPressed()
+{
+	if (bIsCrouched)
+	{
+		UnCrouch();
+	}
+	else
+	{
+		Crouch();
 	}
 }
 
