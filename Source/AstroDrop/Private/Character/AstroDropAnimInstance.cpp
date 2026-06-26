@@ -3,8 +3,10 @@
 
 #include "Character/AstroDropAnimInstance.h"
 #include "Character/AstroDropCharacter.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "Weapon/Weapon.h"
 
 
 void UAstroDropAnimInstance::NativeInitializeAnimation()
@@ -29,6 +31,7 @@ void UAstroDropAnimInstance::NativeUpdateAnimation(float DeltaTime)
 	bIsInAir = AstroDropCharacter->GetCharacterMovement()->IsFalling();
 	bIsAccelerating = AstroDropCharacter->GetCharacterMovement()->GetCurrentAcceleration().Size() > 0.f ? true : false;
 	bWeaponEquipped = AstroDropCharacter->IsWeaponEquipped();
+	EquippedWeapon = AstroDropCharacter->GetEquippedWeapon();
 	bIsCrouched = AstroDropCharacter->bIsCrouched;
 	bAiming = AstroDropCharacter->IsAiming();
 	
@@ -48,4 +51,14 @@ void UAstroDropAnimInstance::NativeUpdateAnimation(float DeltaTime)
 	
 	AO_Yaw = AstroDropCharacter->GetAO_Yaw();
 	AO_Pitch = AstroDropCharacter->GetAO_Pitch();
+	
+	if (bWeaponEquipped && EquippedWeapon && EquippedWeapon->GetWeaponMesh() && AstroDropCharacter->GetMesh())
+	{
+		LeftHandTransform = EquippedWeapon->GetWeaponMesh()->GetSocketTransform(FName("LeftHandSocket"), ERelativeTransformSpace::RTS_World);
+		FVector OutPosition;
+		FRotator OutRotation;
+		AstroDropCharacter->GetMesh()->TransformToBoneSpace(FName("hand_r"), LeftHandTransform.GetLocation(), FRotator::ZeroRotator, OutPosition, OutRotation);
+		LeftHandTransform.SetLocation(OutPosition);
+		LeftHandTransform.SetRotation(FQuat(OutRotation));
+	}
 }

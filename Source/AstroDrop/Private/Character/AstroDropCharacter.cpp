@@ -327,3 +327,9 @@ bool AAstroDropCharacter::IsAiming()
 {
 	return (Combat && Combat->bAiming);
 }
+
+AWeapon* AAstroDropCharacter::GetEquippedWeapon()
+{
+	if (Combat == nullptr) return nullptr;
+	return Combat->EquippedWeapon;
+}
