@@ -34,6 +34,7 @@ void UAstroDropAnimInstance::NativeUpdateAnimation(float DeltaTime)
 	EquippedWeapon = AstroDropCharacter->GetEquippedWeapon();
 	bIsCrouched = AstroDropCharacter->bIsCrouched;
 	bAiming = AstroDropCharacter->IsAiming();
+	TurningInPlace = AstroDropCharacter->GetTurningInPlace();
 	
 	// Offset Yaw for Strafing
 	FRotator AimRotation = AstroDropCharacter->GetBaseAimRotation();
