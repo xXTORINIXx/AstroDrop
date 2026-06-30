@@ -3,6 +3,7 @@
 
 #include "Character/AstroDropCharacter.h"
 #include "EnhancedInputComponent.h"
+#include "Animation/AnimInstance.h"
 #include "AstroDrop/AstroDrop.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
@@ -106,6 +107,10 @@ void AAstroDropCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 		// Aiming
 		EnhancedInputComponent->BindAction(AimAction, ETriggerEvent::Started, this, &AAstroDropCharacter::AimButtonPressed);
 		EnhancedInputComponent->BindAction(AimAction, ETriggerEvent::Completed, this, &AAstroDropCharacter::AimButtonReleased);
+		
+		// Fire
+		EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Started, this, &AAstroDropCharacter::FireButtonPressed);
+		EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Completed, this, &AAstroDropCharacter::FireButtonReleased);
 	}
 	else
 	{
@@ -142,6 +147,20 @@ void AAstroDropCharacter::PostInitializeComponents()
 	if (Combat)
 	{
 		Combat->Character = this;
+	}
+}
+
+void AAstroDropCharacter::PlayFireMontage(bool bAiming)
+{
+	if (Combat == nullptr || Combat->EquippedWeapon == nullptr) return;
+
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	if (AnimInstance && FireWeaponMontage)
+	{
+		AnimInstance->Montage_Play(FireWeaponMontage);
+		FName SectionName;
+		SectionName = bAiming ? FName("RifleAim") : FName("RifleHip");
+		AnimInstance->Montage_JumpToSection(SectionName);
 	}
 }
 
@@ -303,6 +322,22 @@ void AAstroDropCharacter::Jump()
 	else
 	{
 		Super::Jump();
+	}
+}
+
+void AAstroDropCharacter::FireButtonPressed()
+{
+	if (Combat)
+	{
+		Combat->FireButtonPressed(true);
+	}
+}
+
+void AAstroDropCharacter::FireButtonReleased()
+{
+	if (Combat)
+	{
+		Combat->FireButtonPressed(false);
 	}
 }
 

@@ -26,6 +26,7 @@ public:
 	virtual void OnRep_PlayerState() override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void PostInitializeComponents() override;
+	void PlayFireMontage(bool bAiming);
 	
 	/** Handles move inputs from either controls or UI interfaces */
 	UFUNCTION(BlueprintCallable, Category="Input")
@@ -99,6 +100,13 @@ protected:
 	void AimOffset(float DeltaTime);
 	virtual void Jump() override;
 	
+	/** Called for equip input */
+	UPROPERTY(EditAnywhere, Category="Input")
+	UInputAction* FireAction;
+	
+	void FireButtonPressed();
+	void FireButtonReleased();
+	
 
 private:
 	UPROPERTY(VisibleAnywhere, Category = Camera)
@@ -126,6 +134,9 @@ private:
 	
 	ETurningInPlace TurningInPlace;
 	void TurnInPlace(float DeltaTime);
+	
+	UPROPERTY(EditAnywhere, Category = Combat)
+	class UAnimMontage* FireWeaponMontage;
 	
 public:	
 	void SetOverlappingWeapon(AWeapon* Weapon);
