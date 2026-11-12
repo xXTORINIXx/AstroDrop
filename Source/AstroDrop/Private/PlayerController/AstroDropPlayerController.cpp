@@ -6,9 +6,30 @@
 #include "EnhancedInputSubsystems.h"
 #include "AstroDrop/AstroDrop.h"
 #include "Blueprint/UserWidget.h"
+#include "Components/ProgressBar.h"
+#include "Components/TextBlock.h"
 #include "GameFramework/PlayerState.h"
+#include "HUD/AstroDropHUD.h"
+#include "HUD/CharacterOverlay.h"
 #include "Widgets/Input/SVirtualJoystick.h"
 
+
+void AAstroDropPlayerController::SetHUDHealth(float Health, float MaxHealth)
+{
+	AstroDropHUD = AstroDropHUD == nullptr ? Cast<AAstroDropHUD>(GetHUD()) : AstroDropHUD;
+
+	bool bHUDValid = AstroDropHUD && 
+		AstroDropHUD->CharacterOverlay && 
+		AstroDropHUD->CharacterOverlay->HealthBar && 
+		AstroDropHUD->CharacterOverlay->HealthText;
+	if (bHUDValid)
+	{
+		const float HealthPercent = Health / MaxHealth;
+		AstroDropHUD->CharacterOverlay->HealthBar->SetPercent(HealthPercent);
+		FString HealthText = FString::Printf(TEXT("%d/%d"), FMath::CeilToInt(Health), FMath::CeilToInt(MaxHealth));
+		AstroDropHUD->CharacterOverlay->HealthText->SetText(FText::FromString(HealthText));
+	}
+}
 
 void AAstroDropPlayerController::ClientSetEOSNickname_Implementation(const FString& Nickname)
 {
@@ -60,6 +81,8 @@ void AAstroDropPlayerController::BeginPlay()
 			UE_LOG(LogTeste, Error, TEXT("Could not spawn mobile controls widget."));
 		}
 	}
+	
+	AstroDropHUD = Cast<AAstroDropHUD>(GetHUD());
 }
 
 void AAstroDropPlayerController::SetupInputComponent()

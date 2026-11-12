@@ -17,11 +17,13 @@ UCLASS()
 class ASTRODROP_API AAstroDropPlayerController : public AMultiplayerLobbyPlayerController
 {
 	GENERATED_BODY()
-public:
 
+public:
 	UFUNCTION(Client, Reliable)
 	void ClientSetEOSNickname(
 		const FString& Nickname);
+	void SetHUDHealth(float Health, float MaxHealth);
+
 protected:
 	/** Input Mapping Contexts */
 	UPROPERTY(EditAnywhere, Category ="Input|Input Mappings")
@@ -51,7 +53,8 @@ protected:
 	virtual void SetupInputComponent() override;
 
 	/** Returns true if the player should use UMG touch controls */
-	bool ShouldUseTouchControls() const;	
+	bool ShouldUseTouchControls() const;
 	
-	
+private:
+	class AAstroDropHUD* AstroDropHUD;
 };

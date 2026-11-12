@@ -15,6 +15,7 @@
 #include "HUD/OverheadWidget.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Net/UnrealNetwork.h"
+#include "PlayerController/AstroDropPlayerController.h"
 #include "Weapon/Weapon.h"
 
 // Sets default values
@@ -238,6 +239,12 @@ void AAstroDropCharacter::DoJumpEnd()
 void AAstroDropCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+	
+	AstroDropPlayerController = Cast<AAstroDropPlayerController>(Controller);
+	if (AstroDropPlayerController)
+	{
+		AstroDropPlayerController->SetHUDHealth(Health, MaxHealth);
+	}
 }
 
 void AAstroDropCharacter::Move(const FInputActionValue& Value)

@@ -178,6 +178,8 @@ private:
 	UFUNCTION()
 	void OnRep_Health();
 	
+	class AAstroDropPlayerController* AstroDropPlayerController;
+	
 public:	
 	void SetOverlappingWeapon(AWeapon* Weapon);
 	bool IsWeaponEquipped();
