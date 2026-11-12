@@ -42,8 +42,12 @@ protected:
 	
 	void TraceUnderCrosshairs(FHitResult& TraceHitResult);
 	
+	void SetHUDCrosshairs(float DeltaTime);
+	
 private:
 	class AAstroDropCharacter* Character;
+	class AAstroDropPlayerController* Controller;
+	class AAstroDropHUD* HUD;
 	
 	UPROPERTY(ReplicatedUsing = OnRep_EquippedWeapon)
 	AWeapon* EquippedWeapon;	
