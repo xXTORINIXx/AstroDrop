@@ -180,10 +180,6 @@ void AAstroDropCharacter::PlayFireMontage(bool bAiming)
 	}
 }
 
-void AAstroDropCharacter::MulticastHit_Implementation()
-{
-	PlayHitReactMontage();
-}
 
 void AAstroDropCharacter::OnRep_ReplicatedMovement()
 {	
@@ -240,10 +236,10 @@ void AAstroDropCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 	
-	AstroDropPlayerController = Cast<AAstroDropPlayerController>(Controller);
-	if (AstroDropPlayerController)
-	{
-		AstroDropPlayerController->SetHUDHealth(Health, MaxHealth);
+	UpdateHUDHealth();
+	if (HasAuthority())
+	{	
+		OnTakeAnyDamage.AddDynamic(this, &AAstroDropCharacter::ReceiveDamage);
 	}
 }
 
@@ -428,6 +424,23 @@ void AAstroDropCharacter::PlayHitReactMontage()
 	}
 }
 
+void AAstroDropCharacter::ReceiveDamage(AActor* DamagedActor, float Damage, const UDamageType* DamageType,
+	class AController* InstigatorController, AActor* DamageCauser)
+{
+	Health = FMath::Clamp(Health - Damage, 0.f, MaxHealth);
+	UpdateHUDHealth();
+	PlayHitReactMontage();
+}
+
+void AAstroDropCharacter::UpdateHUDHealth()
+{
+	AstroDropPlayerController = AstroDropPlayerController == nullptr ? Cast<AAstroDropPlayerController>(Controller) : AstroDropPlayerController;
+	if (AstroDropPlayerController)
+	{
+		AstroDropPlayerController->SetHUDHealth(Health, MaxHealth);
+	}
+}
+
 void AAstroDropCharacter::ServerEquipButtonPressed_Implementation()
 {
 	if (Combat)
@@ -500,6 +513,8 @@ float AAstroDropCharacter::CalculateSpeed()
 
 void AAstroDropCharacter::OnRep_Health()
 {
+	UpdateHUDHealth();
+	PlayHitReactMontage();
 }
 
 void AAstroDropCharacter::SetOverlappingWeapon(AWeapon* Weapon)

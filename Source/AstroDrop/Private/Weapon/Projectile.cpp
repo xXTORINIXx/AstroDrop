@@ -4,7 +4,6 @@
 #include "Weapon/Projectile.h"
 
 #include "AstroDrop/AstroDrop.h"
-#include "Character/AstroDropCharacter.h"
 #include "Components/BoxComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
@@ -56,22 +55,7 @@ void AProjectile::BeginPlay()
 
 void AProjectile::OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp,
 	FVector NormalImpulse, const FHitResult& Hit)
-{
-	AAstroDropCharacter* AstroDropCharacter = Cast<AAstroDropCharacter>(OtherActor);
-	if (AstroDropCharacter)
-	{
-		// UE_LOG(LogTemp, Warning, TEXT("Osso atingido: %s"), *Hit.BoneName.ToString());
-		//
-		// if (GEngine)
-		// {
-		// 	GEngine->AddOnScreenDebugMessage(
-		// 		-1, 5.f, FColor::Yellow,
-		// 		FString::Printf(TEXT("Osso atingido: %s"), *Hit.BoneName.ToString())
-		// 	);
-		// }
-		
-		AstroDropCharacter->MulticastHit();		
-	}
+{	
 	Destroy();
 }
 
