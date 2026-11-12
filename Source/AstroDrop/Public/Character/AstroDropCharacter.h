@@ -32,6 +32,8 @@ public:
 	UFUNCTION(NetMulticast, Unreliable)
 	void MulticastHit();
 	
+	virtual void OnRep_ReplicatedMovement() override;
+	
 	/** Handles move inputs from either controls or UI interfaces */
 	UFUNCTION(BlueprintCallable, Category="Input")
 	virtual void DoMove(float Right, float Forward);
@@ -102,6 +104,10 @@ protected:
 	void AimButtonReleased();
 	
 	void AimOffset(float DeltaTime);
+	
+	void CalculateAO_Pitch();
+	void SimProxiesTurn();
+	
 	virtual void Jump() override;
 	
 	/** Called for equip input */
@@ -151,6 +157,14 @@ private:
 	UPROPERTY(EditAnywhere)
 	float CameraThreshold = 200.f;
 	
+	bool bRotateRootBone;
+	float TurnThreshold = 0.5f;
+	FRotator ProxyRotationLastFrame;
+	FRotator ProxyRotation;
+	float ProxyYaw;
+	float TimeSinceLastMovementReplication;
+	float CalculateSpeed();
+	
 public:	
 	void SetOverlappingWeapon(AWeapon* Weapon);
 	bool IsWeaponEquipped();
@@ -160,4 +174,5 @@ public:
 	AWeapon* GetEquippedWeapon();
 	FORCEINLINE ETurningInPlace GetTurningInPlace() const { return TurningInPlace; }
 	FVector GetHitTarget() const;
+	FORCEINLINE bool ShouldRotateRootBone() const { return bRotateRootBone; }
 };
