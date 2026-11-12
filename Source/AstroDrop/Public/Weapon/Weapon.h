@@ -60,6 +60,15 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Weapon Properties|Zoom")
 	float ZoomInterpSpeed = 20.f;
 
+	/** 
+	* Automatic fire
+	*/
+	UPROPERTY(EditAnywhere, Category = "Weapon Properties|Combat")
+	float FireDelay = .15f;
+
+	UPROPERTY(EditAnywhere, Category = "Weapon Properties|Combat")
+	bool bAutomatic = true;
+	
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
