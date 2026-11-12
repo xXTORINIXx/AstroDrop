@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "Interfaces/InteractWithCrosshairsInterface.h"
 #include "Types/TurningInPlace.h"
 #include "AstroDropCharacter.generated.h"
 
@@ -13,7 +14,7 @@ class UInputAction;
 struct FInputActionValue;
 
 UCLASS()
-class ASTRODROP_API AAstroDropCharacter : public ACharacter
+class ASTRODROP_API AAstroDropCharacter : public ACharacter, public IInteractWithCrosshairsInterface
 {
 	GENERATED_BODY()
 
