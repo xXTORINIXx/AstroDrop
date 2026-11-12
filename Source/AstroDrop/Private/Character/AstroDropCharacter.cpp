@@ -153,6 +153,7 @@ void AAstroDropCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& 
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME_CONDITION(AAstroDropCharacter, OverlappingWeapon, COND_OwnerOnly);
+	DOREPLIFETIME(AAstroDropCharacter, Health);
 }
 
 void AAstroDropCharacter::PostInitializeComponents()
@@ -488,6 +489,10 @@ float AAstroDropCharacter::CalculateSpeed()
 	FVector Velocity = GetVelocity();
 	Velocity.Z = 0.f;
 	return Velocity.Size();
+}
+
+void AAstroDropCharacter::OnRep_Health()
+{
 }
 
 void AAstroDropCharacter::SetOverlappingWeapon(AWeapon* Weapon)
