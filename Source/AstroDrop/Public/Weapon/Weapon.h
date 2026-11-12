@@ -21,8 +21,8 @@ UCLASS()
 class ASTRODROP_API AWeapon : public AActor
 {
 	GENERATED_BODY()
-	
-public:	
+
+public:
 	// Sets default values for this actor's properties
 	AWeapon();
 	// Called every frame
@@ -30,7 +30,7 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	void ShowPickupWidget(bool bShowWidget);
 	virtual void Fire(const FVector& HitTarget);
-	
+
 	/**
 	* Textures for the weapon crosshairs
 	*/
@@ -49,12 +49,21 @@ public:
 
 	UPROPERTY(EditAnywhere, Category = "Weapon Properties|Crosshairs")
 	UTexture2D* CrosshairsBottom;
-	
+
+	/** 
+	* Zoomed FOV while aiming
+	*/
+
+	UPROPERTY(EditAnywhere, Category = "Weapon Properties|Zoom")
+	float ZoomedFOV = 30.f;
+
+	UPROPERTY(EditAnywhere, Category = "Weapon Properties|Zoom")
+	float ZoomInterpSpeed = 20.f;
 
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
-	
+
 	UFUNCTION()
 	virtual void OnSphereOverlap(
 		UPrimitiveComponent* OverlappedComponent,
@@ -64,7 +73,7 @@ protected:
 		bool bFromSweep,
 		const FHitResult& SweepResult
 	);
-	
+
 	UFUNCTION()
 	virtual void OnSphereEndOverlap(
 		UPrimitiveComponent* OverlappedComponent,
@@ -72,7 +81,7 @@ protected:
 		UPrimitiveComponent* OtherComp,
 		int32 OtherBodyIndex
 	);
-	
+
 private:
 	UPROPERTY(VisibleAnywhere, Category = "Weapon Properties")
 	USkeletalMeshComponent* WeaponMesh;
@@ -82,16 +91,16 @@ private:
 
 	UPROPERTY(ReplicatedUsing = OnRep_WeaponState, VisibleAnywhere, Category = "Weapon Properties")
 	EWeaponState WeaponState;
-	
+
 	UFUNCTION()
 	void OnRep_WeaponState();
-	
+
 	UPROPERTY(VisibleAnywhere, Category = "Weapon Properties")
 	class UWidgetComponent* PickupWidget;
-	
+
 	UPROPERTY(EditAnywhere, Category = "Weapon Properties")
 	class UAnimationAsset* FireAnimation;
-	
+
 	UPROPERTY(EditAnywhere, Category = "Weapon Properties")
 	TSubclassOf<class ACasing> CasingClass;
 
@@ -99,4 +108,6 @@ public:
 	void SetWeaponState(EWeaponState State);
 	FORCEINLINE USphereComponent* GetAreaSphere() const { return AreaSphere; }
 	FORCEINLINE USkeletalMeshComponent* GetWeaponMesh() const { return WeaponMesh; }
+	FORCEINLINE float GetZoomedFOV() const { return ZoomedFOV; }
+	FORCEINLINE float GetZoomInterpSpeed() const { return ZoomInterpSpeed; }
 };
