@@ -29,6 +29,9 @@ public:
 	virtual void PostInitializeComponents() override;
 	void PlayFireMontage(bool bAiming);
 	
+	UFUNCTION(NetMulticast, Unreliable)
+	void MulticastHit();
+	
 	/** Handles move inputs from either controls or UI interfaces */
 	UFUNCTION(BlueprintCallable, Category="Input")
 	virtual void DoMove(float Right, float Forward);
@@ -107,6 +110,7 @@ protected:
 	
 	void FireButtonPressed();
 	void FireButtonReleased();
+	void PlayHitReactMontage();
 	
 
 private:
@@ -138,6 +142,9 @@ private:
 	
 	UPROPERTY(EditAnywhere, Category = Combat)
 	class UAnimMontage* FireWeaponMontage;
+	
+	UPROPERTY(EditAnywhere, Category = Combat)
+	UAnimMontage* HitReactMontage;
 	
 	void HideCameraIfCharacterClose();
 

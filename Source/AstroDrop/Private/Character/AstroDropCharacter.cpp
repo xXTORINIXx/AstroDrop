@@ -65,6 +65,7 @@ AAstroDropCharacter::AAstroDropCharacter()
 	GetCharacterMovement()->NavAgentProps.bCanCrouch = true;
 	
 	GetCapsuleComponent()->SetCollisionResponseToChannel(ECollisionChannel::ECC_Camera, ECollisionResponse::ECR_Ignore);
+	GetMesh()->SetCollisionObjectType(ECC_SkeletalMesh);
 	GetMesh()->SetCollisionResponseToChannel(ECollisionChannel::ECC_Camera, ECollisionResponse::ECR_Ignore);
 	GetMesh()->SetCollisionResponseToChannel(ECollisionChannel::ECC_Visibility, ECollisionResponse::ECR_Block);
 	GetCharacterMovement()->RotationRate = FRotator(0.f, 0.f, 850.f);
@@ -81,7 +82,6 @@ void AAstroDropCharacter::Tick(float DeltaTime)
 	AimOffset(DeltaTime);
 	HideCameraIfCharacterClose();
 }
-
 
 // Called to bind functionality to input
 void AAstroDropCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -164,6 +164,11 @@ void AAstroDropCharacter::PlayFireMontage(bool bAiming)
 		SectionName = bAiming ? FName("RifleAim") : FName("RifleHip");
 		AnimInstance->Montage_JumpToSection(SectionName);
 	}
+}
+
+void AAstroDropCharacter::MulticastHit_Implementation()
+{
+	PlayHitReactMontage();
 }
 
 void AAstroDropCharacter::DoMove(float Right, float Forward)
@@ -340,6 +345,19 @@ void AAstroDropCharacter::FireButtonReleased()
 	if (Combat)
 	{
 		Combat->FireButtonPressed(false);
+	}
+}
+
+void AAstroDropCharacter::PlayHitReactMontage()
+{
+	if (Combat == nullptr || Combat->EquippedWeapon == nullptr) return;
+
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	if (AnimInstance && HitReactMontage)
+	{
+		AnimInstance->Montage_Play(HitReactMontage);
+		FName SectionName("FromFront");
+		AnimInstance->Montage_JumpToSection(SectionName);
 	}
 }
 
