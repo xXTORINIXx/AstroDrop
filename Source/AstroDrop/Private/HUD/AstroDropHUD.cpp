@@ -21,7 +21,7 @@ void AAstroDropHUD::DrawHUD()
 		if (HUDPackage.CrosshairsCenter)
 		{
 			FVector2D Spread(0.f, 0.f);
-			DrawCrosshair(HUDPackage.CrosshairsCenter, ViewportCenter, Spread, HUDPackage.CrosshairsColor);
+			DrawCrosshair(HUDPackage.CrosshairsCenter, ViewportCenter, Spread, HUDPackage.CrosshairsTraceHitColor);
 		}
 		if (HUDPackage.CrosshairsLeft)
 		{
@@ -67,16 +67,16 @@ void AAstroDropHUD::DrawCrosshair(UTexture2D* Texture, FVector2D ViewportCenter,
 	const float TextureWidth = Texture->GetSizeX();
 	const float TextureHeight = Texture->GetSizeY();
 	const FVector2D TextureDrawPoint(
-		ViewportCenter.X - (TextureWidth / 2.f) + Spread.X,
-		ViewportCenter.Y - (TextureHeight / 2.f) + Spread.Y
+		ViewportCenter.X - (CrosshairTextureWidth / 2.f) + Spread.X,
+		ViewportCenter.Y - (CrosshairTextureHeight / 2.f) + Spread.Y
 	);
 
 	DrawTexture(
 		Texture,
 		TextureDrawPoint.X,
 		TextureDrawPoint.Y,
-		TextureWidth,
-		TextureHeight,
+		CrosshairTextureWidth,
+		CrosshairTextureHeight,
 		0.f,
 		0.f,
 		1.f,

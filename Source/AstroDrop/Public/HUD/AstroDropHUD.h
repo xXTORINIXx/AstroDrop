@@ -18,6 +18,7 @@ public:
 	UTexture2D* CrosshairsBottom;
 	float CrosshairSpread;
 	FLinearColor CrosshairsColor;
+	FLinearColor CrosshairsTraceHitColor;
 };
 
 /**
@@ -46,6 +47,10 @@ private:
 
 	UPROPERTY(EditAnywhere)
 	float CrosshairSpreadMax = 16.f;
+	UPROPERTY(EditAnywhere)
+	float CrosshairTextureWidth = 64.f;
+	UPROPERTY(EditAnywhere)
+	float CrosshairTextureHeight = 64.f;
 	
 public:
 	FORCEINLINE void SetHUDPackage(const FHUDPackage& Package) { HUDPackage = Package; }
