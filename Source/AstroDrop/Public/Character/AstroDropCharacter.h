@@ -30,8 +30,10 @@ public:
 	void PlayFireMontage(bool bAiming);
 	void PlayElimMontage();	
 	virtual void OnRep_ReplicatedMovement() override;
-	UFUNCTION(NetMulticast, Reliable)
+	
 	void Elim();
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastElim();
 	
 	/** Handles move inputs from either controls or UI interfaces */
 	UFUNCTION(BlueprintCallable, Category="Input")
@@ -57,6 +59,7 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void PossessedBy(AController* NewController) override;
 	
 	/** Jump Input Action */
 	UPROPERTY(EditAnywhere, Category="Input")
@@ -187,6 +190,12 @@ private:
 	class AAstroDropPlayerController* AstroDropPlayerController;
 	
 	bool bElimmed = false;
+	FTimerHandle ElimTimer;
+
+	UPROPERTY(EditDefaultsOnly)
+	float ElimDelay = 3.f;
+
+	void ElimTimerFinished();
 	
 public:	
 	void SetOverlappingWeapon(AWeapon* Weapon);

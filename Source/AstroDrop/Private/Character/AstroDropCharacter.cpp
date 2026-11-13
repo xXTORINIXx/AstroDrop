@@ -199,7 +199,18 @@ void AAstroDropCharacter::OnRep_ReplicatedMovement()
 	TimeSinceLastMovementReplication = 0.f;
 }
 
-void AAstroDropCharacter::Elim_Implementation()
+void AAstroDropCharacter::Elim()
+{
+	MulticastElim();
+	GetWorldTimerManager().SetTimer(
+		ElimTimer,
+		this,
+		&AAstroDropCharacter::ElimTimerFinished,
+		ElimDelay
+	);
+}
+
+void AAstroDropCharacter::MulticastElim_Implementation()
 {
 	bElimmed = true;
 	PlayElimMontage();
@@ -258,6 +269,12 @@ void AAstroDropCharacter::BeginPlay()
 	{	
 		OnTakeAnyDamage.AddDynamic(this, &AAstroDropCharacter::ReceiveDamage);
 	}
+}
+
+void AAstroDropCharacter::PossessedBy(AController* NewController)
+{
+	Super::PossessedBy(NewController);
+	UpdateHUDHealth();
 }
 
 void AAstroDropCharacter::Move(const FInputActionValue& Value)
@@ -543,6 +560,15 @@ void AAstroDropCharacter::OnRep_Health()
 {
 	UpdateHUDHealth();
 	PlayHitReactMontage();
+}
+
+void AAstroDropCharacter::ElimTimerFinished()
+{
+	AAstroDropGameMode* AstroDropGameMode = GetWorld()->GetAuthGameMode<AAstroDropGameMode>();
+	if (AstroDropGameMode)
+	{
+		AstroDropGameMode->RequestRespawn(this, Controller);
+	}
 }
 
 void AAstroDropCharacter::SetOverlappingWeapon(AWeapon* Weapon)
