@@ -12,12 +12,14 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/WidgetComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "GameMode/AstroDropGameMode.h"
 #include "HUD/OverheadWidget.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Net/UnrealNetwork.h"
 #include "PlayerController/AstroDropPlayerController.h"
 #include "Weapon/Weapon.h"
 
+class AAstroDropGameMode;
 // Sets default values
 AAstroDropCharacter::AAstroDropCharacter()
 {
@@ -186,6 +188,10 @@ void AAstroDropCharacter::OnRep_ReplicatedMovement()
 	Super::OnRep_ReplicatedMovement();
 	SimProxiesTurn();
 	TimeSinceLastMovementReplication = 0.f;
+}
+
+void AAstroDropCharacter::Elim()
+{
 }
 
 void AAstroDropCharacter::DoMove(float Right, float Forward)
@@ -430,6 +436,17 @@ void AAstroDropCharacter::ReceiveDamage(AActor* DamagedActor, float Damage, cons
 	Health = FMath::Clamp(Health - Damage, 0.f, MaxHealth);
 	UpdateHUDHealth();
 	PlayHitReactMontage();
+	
+	if (Health == 0.f)
+	{
+		AAstroDropGameMode* AstroDropGameMode = GetWorld()->GetAuthGameMode<AAstroDropGameMode>();
+		if (AstroDropGameMode)
+		{
+			AstroDropPlayerController = AstroDropPlayerController == nullptr ? Cast<AAstroDropPlayerController>(Controller) : AstroDropPlayerController;
+			AAstroDropPlayerController* AttackerController = Cast<AAstroDropPlayerController>(InstigatorController);
+			AstroDropGameMode->PlayerEliminated(this, AstroDropPlayerController, AttackerController);
+		}
+	}
 }
 
 void AAstroDropCharacter::UpdateHUDHealth()

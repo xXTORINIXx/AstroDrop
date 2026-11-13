@@ -30,6 +30,7 @@ public:
 	void PlayFireMontage(bool bAiming);
 		
 	virtual void OnRep_ReplicatedMovement() override;
+	void Elim();
 	
 	/** Handles move inputs from either controls or UI interfaces */
 	UFUNCTION(BlueprintCallable, Category="Input")

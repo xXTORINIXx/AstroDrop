@@ -16,6 +16,6 @@ class ASTRODROP_API AAstroDropGameMode : public AGameMode
 	
 public:
 	AAstroDropGameMode();
-	
+	virtual void PlayerEliminated(class AAstroDropCharacter* ElimmedCharacter, class AAstroDropPlayerController* VictimController, AAstroDropPlayerController* AttackerController);
 	
 };
