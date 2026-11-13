@@ -36,6 +36,7 @@ void UAstroDropAnimInstance::NativeUpdateAnimation(float DeltaTime)
 	bAiming = AstroDropCharacter->IsAiming();
 	TurningInPlace = AstroDropCharacter->GetTurningInPlace();
 	bRotateRootBone = AstroDropCharacter->ShouldRotateRootBone();
+	bElimmed = AstroDropCharacter->IsElimmed();
 	
 	// Offset Yaw for Strafing
 	FRotator AimRotation = AstroDropCharacter->GetBaseAimRotation();

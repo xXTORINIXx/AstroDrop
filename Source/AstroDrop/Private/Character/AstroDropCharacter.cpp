@@ -182,6 +182,15 @@ void AAstroDropCharacter::PlayFireMontage(bool bAiming)
 	}
 }
 
+void AAstroDropCharacter::PlayElimMontage()
+{
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	if (AnimInstance && ElimMontage)
+	{
+		AnimInstance->Montage_Play(ElimMontage);
+	}
+}
+
 
 void AAstroDropCharacter::OnRep_ReplicatedMovement()
 {	
@@ -190,8 +199,10 @@ void AAstroDropCharacter::OnRep_ReplicatedMovement()
 	TimeSinceLastMovementReplication = 0.f;
 }
 
-void AAstroDropCharacter::Elim()
+void AAstroDropCharacter::Elim_Implementation()
 {
+	bElimmed = true;
+	PlayElimMontage();
 }
 
 void AAstroDropCharacter::DoMove(float Right, float Forward)

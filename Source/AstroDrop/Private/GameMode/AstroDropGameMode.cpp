@@ -3,6 +3,7 @@
 
 #include "GameMode/AstroDropGameMode.h"
 
+#include "Character/AstroDropCharacter.h"
 #include "HUD/AstroDropHUD.h"
 #include "PlayerController/AstroDropPlayerController.h"
 
@@ -16,6 +17,10 @@ AAstroDropGameMode::AAstroDropGameMode()
 void AAstroDropGameMode::PlayerEliminated(class AAstroDropCharacter* ElimmedCharacter,
 	class AAstroDropPlayerController* VictimController, AAstroDropPlayerController* AttackerController)
 {
+	if (ElimmedCharacter)
+	{
+		ElimmedCharacter->Elim();
+	}
 }
 
 

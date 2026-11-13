@@ -28,8 +28,9 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void PostInitializeComponents() override;
 	void PlayFireMontage(bool bAiming);
-		
+	void PlayElimMontage();	
 	virtual void OnRep_ReplicatedMovement() override;
+	UFUNCTION(NetMulticast, Reliable)
 	void Elim();
 	
 	/** Handles move inputs from either controls or UI interfaces */
@@ -154,6 +155,9 @@ private:
 	UPROPERTY(EditAnywhere, Category = Combat)
 	UAnimMontage* HitReactMontage;
 	
+	UPROPERTY(EditAnywhere, Category = Combat)
+	UAnimMontage* ElimMontage;
+	
 	void HideCameraIfCharacterClose();
 
 	UPROPERTY(EditAnywhere)
@@ -182,6 +186,8 @@ private:
 	
 	class AAstroDropPlayerController* AstroDropPlayerController;
 	
+	bool bElimmed = false;
+	
 public:	
 	void SetOverlappingWeapon(AWeapon* Weapon);
 	bool IsWeaponEquipped();
@@ -192,4 +198,5 @@ public:
 	FORCEINLINE ETurningInPlace GetTurningInPlace() const { return TurningInPlace; }
 	FVector GetHitTarget() const;
 	FORCEINLINE bool ShouldRotateRootBone() const { return bRotateRootBone; }
+	FORCEINLINE bool IsElimmed() const { return bElimmed; }
 };
