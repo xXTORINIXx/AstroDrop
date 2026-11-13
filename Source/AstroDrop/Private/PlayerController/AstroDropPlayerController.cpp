@@ -6,6 +6,7 @@
 #include "EnhancedInputSubsystems.h"
 #include "AstroDrop/AstroDrop.h"
 #include "Blueprint/UserWidget.h"
+#include "Character/AstroDropCharacter.h"
 #include "Components/ProgressBar.h"
 #include "Components/TextBlock.h"
 #include "GameFramework/PlayerState.h"
@@ -28,6 +29,16 @@ void AAstroDropPlayerController::SetHUDHealth(float Health, float MaxHealth)
 		AstroDropHUD->CharacterOverlay->HealthBar->SetPercent(HealthPercent);
 		FString HealthText = FString::Printf(TEXT("%d/%d"), FMath::CeilToInt(Health), FMath::CeilToInt(MaxHealth));
 		AstroDropHUD->CharacterOverlay->HealthText->SetText(FText::FromString(HealthText));
+	}
+}
+
+void AAstroDropPlayerController::OnPossess(APawn* InPawn)
+{
+	Super::OnPossess(InPawn);
+	AAstroDropCharacter* AstroDropCharacter = Cast<AAstroDropCharacter>(InPawn);
+	if (AstroDropCharacter)
+	{
+		SetHUDHealth(AstroDropCharacter->GetHealth(), AstroDropCharacter->GetMaxHealth());
 	}
 }
 

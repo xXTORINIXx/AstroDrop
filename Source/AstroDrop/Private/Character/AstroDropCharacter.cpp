@@ -331,11 +331,6 @@ void AAstroDropCharacter::BeginPlay()
 	}
 }
 
-void AAstroDropCharacter::PossessedBy(AController* NewController)
-{
-	Super::PossessedBy(NewController);
-	UpdateHUDHealth();
-}
 
 void AAstroDropCharacter::Move(const FInputActionValue& Value)
 {

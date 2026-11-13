@@ -23,6 +23,7 @@ public:
 	void ClientSetEOSNickname(
 		const FString& Nickname);
 	void SetHUDHealth(float Health, float MaxHealth);
+	virtual void OnPossess(APawn* InPawn) override;
 
 protected:
 	/** Input Mapping Contexts */
