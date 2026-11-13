@@ -23,6 +23,8 @@ public:
 	void ClientSetEOSNickname(
 		const FString& Nickname);
 	void SetHUDHealth(float Health, float MaxHealth);
+	void SetHUDScore(float Score);
+	void SetHUDDefeats(int32 Defeats);
 	virtual void OnPossess(APawn* InPawn) override;
 
 protected:

@@ -32,6 +32,32 @@ void AAstroDropPlayerController::SetHUDHealth(float Health, float MaxHealth)
 	}
 }
 
+void AAstroDropPlayerController::SetHUDScore(float Score)
+{
+	AstroDropHUD = AstroDropHUD == nullptr ? Cast<AAstroDropHUD>(GetHUD()) : AstroDropHUD;
+	bool bHUDValid = AstroDropHUD &&
+		AstroDropHUD->CharacterOverlay &&
+		AstroDropHUD->CharacterOverlay->ScoreAmount;
+	if (bHUDValid)
+	{
+		FString ScoreText = FString::Printf(TEXT("%d"), FMath::FloorToInt(Score));
+		AstroDropHUD->CharacterOverlay->ScoreAmount->SetText(FText::FromString(ScoreText));
+	}
+}
+
+void AAstroDropPlayerController::SetHUDDefeats(int32 Defeats)
+{
+	AstroDropHUD = AstroDropHUD == nullptr ? Cast<AAstroDropHUD>(GetHUD()) : AstroDropHUD;
+	bool bHUDValid = AstroDropHUD &&
+		AstroDropHUD->CharacterOverlay &&
+		AstroDropHUD->CharacterOverlay->DefeatsAmount;
+	if (bHUDValid)
+	{
+		FString DefeatsText = FString::Printf(TEXT("%d"), Defeats);
+		AstroDropHUD->CharacterOverlay->DefeatsAmount->SetText(FText::FromString(DefeatsText));
+	}
+}
+
 void AAstroDropPlayerController::OnPossess(APawn* InPawn)
 {
 	Super::OnPossess(InPawn);

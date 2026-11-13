@@ -19,6 +19,7 @@
 #include "Net/UnrealNetwork.h"
 #include "Particles/ParticleSystemComponent.h"
 #include "PlayerController/AstroDropPlayerController.h"
+#include "PlayerState/AstroDropPlayerState.h"
 #include "Sound/SoundCue.h"
 #include "Weapon/Weapon.h"
 
@@ -101,6 +102,7 @@ void AAstroDropCharacter::Tick(float DeltaTime)
 		CalculateAO_Pitch();
 	}
 	HideCameraIfCharacterClose();
+	PollInit();
 }
 
 // Called to bind functionality to input
@@ -538,6 +540,19 @@ void AAstroDropCharacter::UpdateHUDHealth()
 	if (AstroDropPlayerController)
 	{
 		AstroDropPlayerController->SetHUDHealth(Health, MaxHealth);
+	}
+}
+
+void AAstroDropCharacter::PollInit()
+{
+	if (AstroDropPlayerState == nullptr)
+	{
+		AstroDropPlayerState = GetPlayerState<AAstroDropPlayerState>();
+		if (AstroDropPlayerState)
+		{
+			AstroDropPlayerState->AddToScore(0.f);
+			AstroDropPlayerState->AddToDefeats(0);
+		}
 	}
 }
 

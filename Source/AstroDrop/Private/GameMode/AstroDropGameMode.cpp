@@ -8,17 +8,33 @@
 #include "HUD/AstroDropHUD.h"
 #include "Kismet/GameplayStatics.h"
 #include "PlayerController/AstroDropPlayerController.h"
+#include "PlayerState/AstroDropPlayerState.h"
 
 
 AAstroDropGameMode::AAstroDropGameMode()
 {
 	PlayerControllerClass = AAstroDropPlayerController::StaticClass();
+	PlayerStateClass = AAstroDropPlayerState::StaticClass();
 	HUDClass = AAstroDropHUD::StaticClass();
 }
 
 void AAstroDropGameMode::PlayerEliminated(class AAstroDropCharacter* ElimmedCharacter,
 	class AAstroDropPlayerController* VictimController, AAstroDropPlayerController* AttackerController)
 {
+	if (AttackerController == nullptr || AttackerController->PlayerState == nullptr) return;
+	if (VictimController == nullptr || VictimController->PlayerState == nullptr) return;
+	AAstroDropPlayerState* AttackerPlayerState = AttackerController ? Cast<AAstroDropPlayerState>(AttackerController->PlayerState) : nullptr;
+	AAstroDropPlayerState* VictimPlayerState = VictimController ? Cast<AAstroDropPlayerState>(VictimController->PlayerState) : nullptr;
+
+	if (AttackerPlayerState && AttackerPlayerState != VictimPlayerState)
+	{
+		AttackerPlayerState->AddToScore(1.f);
+	}
+	if (VictimPlayerState)
+	{
+		VictimPlayerState->AddToDefeats(1);
+	}
+	
 	if (ElimmedCharacter)
 	{
 		ElimmedCharacter->Elim();
